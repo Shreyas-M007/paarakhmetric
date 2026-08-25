@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+ENV/
+.env
+
+# Databases
+*.db
+*.sqlite
+
+# Uploads and generated reports
+backend/uploads/
+backend/reports/
+uploads/
+reports/
+
+# Node/Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

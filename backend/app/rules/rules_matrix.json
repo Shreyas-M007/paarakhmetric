@@ -1,0 +1,42 @@
+[
+  {
+    "rule_id": "PC-MRP-001",
+    "field": "mrp",
+    "required": true,
+    "severity": "high",
+    "description": "Verification of Maximum Retail Price (MRP) declaration format.",
+    "source": "Legal Metrology Rules 2011, Rule 6(1)(e)"
+  },
+  {
+    "rule_id": "PC-QTY-002",
+    "field": "net_quantity",
+    "required": true,
+    "severity": "high",
+    "description": "Verification of Net Quantity and standard unit classification.",
+    "source": "Legal Metrology Rules 2011, Rule 6(1)(b)"
+  },
+  {
+    "rule_id": "PC-DATE-003",
+    "field": "packing_date",
+    "required": true,
+    "severity": "medium",
+    "description": "Verification of month and year in packing/manufacturing date.",
+    "source": "Legal Metrology Rules 2011, Rule 6(1)(d)"
+  },
+  {
+    "rule_id": "PC-CARE-004",
+    "field": "consumer_care",
+    "required": true,
+    "severity": "medium",
+    "description": "Helpline, phone number or email address for customer complaints.",
+    "source": "Legal Metrology Rules 2011, Rule 6(1)(g)"
+  },
+  {
+    "rule_id": "PC-MFG-005",
+    "field": "manufacturer",
+    "required": true,
+    "severity": "high",
+    "description": "Manufacturer name and address must be clearly visible.",
+    "source": "Legal Metrology Rules 2011, Rule 6(1)(a)"
+  }
+]

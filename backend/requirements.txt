@@ -1,0 +1,11 @@
+fastapi==0.111.0
+uvicorn==0.30.1
+sqlalchemy
+pydantic
+python-multipart==0.0.9
+opencv-python-headless==4.9.0.80
+paddlepaddle
+paddleocr
+rapidfuzz==3.9.1
+reportlab==4.2.0
+pytest==8.2.1
