@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, Session
 from app.config import settings
 
 # Create engine & session factory
@@ -102,5 +102,80 @@ class ComplianceResult(Base):
 
     inspection = relationship("Inspection", back_populates="compliance_results")
 
+from sqlalchemy import text
+
 def init_db():
     Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS inspections_fts USING fts5(
+                    inspection_id UNINDEXED,
+                    product_name,
+                    manufacturer,
+                    category,
+                    barcode,
+                    location,
+                    status,
+                    notes,
+                    ocr_text,
+                    violations_summary
+                );
+            """))
+            conn.commit()
+        except Exception:
+            pass
+
+def sync_inspection_fts(db: Session, inspection_id: int):
+    """Synchronize an inspection and its OCR/compliance results into the FTS5 search index."""
+    insp = db.query(Inspection).filter(Inspection.id == inspection_id).first()
+    if not insp:
+        return
+    
+    prod_name = (insp.product.name if insp.product else "") or ""
+    manufacturer = (insp.product.manufacturer if insp.product else "") or ""
+    category = (insp.product.category if insp.product else "") or ""
+    barcode = (insp.product.barcode if insp.product else "") or ""
+    location = insp.location or ""
+    status_val = insp.status or ""
+    notes = insp.notes or ""
+    
+    ocr_texts = []
+    for img in insp.images:
+        for ocr in img.ocr_results:
+            if ocr.text:
+                ocr_texts.append(ocr.text)
+    ocr_combined = " ".join(ocr_texts)
+    
+    violations = []
+    for r in insp.compliance_results:
+        if r.status in ("FAIL", "REVIEW"):
+            violations.append(f"{r.rule_id}: {r.details}")
+    violations_summary = " | ".join(violations)
+    
+    try:
+        db.execute(text("DELETE FROM inspections_fts WHERE inspection_id = :id"), {"id": inspection_id})
+        db.execute(text("""
+            INSERT INTO inspections_fts (
+                inspection_id, product_name, manufacturer, category, barcode,
+                location, status, notes, ocr_text, violations_summary
+            ) VALUES (
+                :inspection_id, :product_name, :manufacturer, :category, :barcode,
+                :location, :status, :notes, :ocr_text, :violations_summary
+            )
+        """), {
+            "inspection_id": inspection_id,
+            "product_name": prod_name,
+            "manufacturer": manufacturer,
+            "category": category,
+            "barcode": barcode,
+            "location": location,
+            "status": status_val,
+            "notes": notes,
+            "ocr_text": ocr_combined,
+            "violations_summary": violations_summary
+        })
+        db.commit()
+    except Exception:
+        db.rollback()
+
