@@ -18,6 +18,15 @@ FIELD_NAME_MAP = {
     "country_of_origin": "Country of Origin"
 }
 
+PANEL_TITLE_MAP = {
+    "front": "Front Panel (Principal Display Panel)",
+    "back": "Back Label & Statutory Declarations",
+    "left": "Left Side Panel",
+    "right": "Right Side Panel",
+    "top": "Top View",
+    "bottom": "Bottom / Base View"
+}
+
 def format_field_name(raw_field: str) -> str:
     """Formats technical field identifiers into standard statutory labels."""
     f_lower = str(raw_field).lower().strip()
@@ -38,7 +47,7 @@ def sanitize_text_for_pdf(text: str) -> str:
     s = s.replace("₹", "Rs. ").replace("Rs.  ", "Rs. ").replace("Rs. ", "Rs. ")
     return s
 
-def create_annotated_product_image(inspection_data: dict, input_image_path: str = None) -> str:
+def create_annotated_product_image(inspection_data: dict, input_image_path: str = None, panel_label: str = "Front Panel (PDP)") -> str:
     """
     Creates an image for the PDF report.
     - If violations exist: Draws explicit RED annotations over the failed areas.
@@ -78,11 +87,14 @@ def create_annotated_product_image(inspection_data: dict, input_image_path: str 
         draw.text((35, 32), f"{prod_name} [{category}]", fill=(255, 255, 255))
         draw.text((35, 48), f"Mfd: {mfg}", fill=(160, 174, 192))
         
-        # Declarations simulated positioning
-        draw.text((40, 100), "PRINCIPAL DISPLAY PANEL (PDP)", fill=(113, 128, 150))
+        # Panel Title watermark
+        draw.text((40, 100), f"AUDIT VIEW: {panel_label.upper()}", fill=(113, 128, 150))
     else:
         w, h = base_img.size
         draw = ImageDraw.Draw(base_img)
+        # Add small panel header watermark
+        draw.rectangle([(10, 10), (min(300, w-10), 32)], fill=(15, 23, 42))
+        draw.text((16, 16), f"VIEW: {panel_label.upper()}", fill=(203, 213, 225))
 
     draw = ImageDraw.Draw(base_img)
 
@@ -103,7 +115,7 @@ def create_annotated_product_image(inspection_data: dict, input_image_path: str 
                 # Red highlight box
                 draw.rectangle([(30, box_top), (w - 30, box_top + 52)], outline=(220, 38, 38), width=3, fill=(153, 27, 27, 80))
                 # Label badge
-                draw.rectangle([(30, box_top), (210, box_top + 18)], fill=(220, 38, 38))
+                draw.rectangle([(30, box_top), (220, box_top + 18)], fill=(220, 38, 38))
                 draw.text((36, box_top + 3), f"VIOLATION: {rule_id}", fill=(255, 255, 255))
                 # Issue description
                 draw.text((38, box_top + 23), f"Field: {field_label} -> {decl_val}", fill=(254, 202, 202))
@@ -113,7 +125,7 @@ def create_annotated_product_image(inspection_data: dict, input_image_path: str 
 
         # Top alert banner on image
         draw.rectangle([(0, 0), (w, 24)], fill=(185, 28, 28))
-        draw.text((15, 6), "NON-COMPLIANCE AUDIT OVERLAY - STATUTORY ISSUES HIGHLIGHTED", fill=(255, 255, 255))
+        draw.text((15, 6), f"NON-COMPLIANCE AUDIT OVERLAY - {panel_label.upper()}", fill=(255, 255, 255))
 
     else:
         # CLEAN COMPLIANT IMAGE: No red bounding clutter, just verified stamp
@@ -131,7 +143,7 @@ def create_annotated_product_image(inspection_data: dict, input_image_path: str 
 
 def generate_pdf_report(inspection_data: dict, output_path: str):
     """
-    Generates a professional PDF compliance report using ReportLab with embedded product image & conditional violation annotations.
+    Generates a professional PDF compliance report using ReportLab with embedded product image(s) & conditional violation annotations.
     """
     doc = SimpleDocTemplate(
         output_path,
@@ -209,31 +221,62 @@ def generate_pdf_report(inspection_data: dict, output_path: str):
     story.append(meta_table)
     story.append(Spacer(1, 10))
     
-    # 3. Product Photographic Evidence with Conditional Annotations
-    story.append(Paragraph("Product Photographic Evidence & Audit Visualization", section_heading))
+    # 3. Product Photographic Evidence with Multi-Side Views & Conditional Annotations
+    story.append(Paragraph("Product Photographic Evidence & Multi-Side Inspection Views", section_heading))
     
-    input_img_path = inspection_data.get('image_filepath')
-    temp_annotated_img = create_annotated_product_image(inspection_data, input_img_path)
-    
-    try:
-        img_elem = RLImage(temp_annotated_img, width=440, height=170)
-        img_table = Table([[img_elem]], colWidths=[540])
-        img_table.setStyle(TableStyle([
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#0f172a')),
-            ('PADDING', (0,0), (-1,-1), 4),
-            ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#334155'))
-        ]))
-        story.append(img_table)
+    images_list = inspection_data.get('images', [])
+    if not images_list and inspection_data.get('image_filepath'):
+        images_list = [{"panel_side": "front", "filepath": inspection_data.get('image_filepath')}]
         
-        if status == 'NON_COMPLIANT':
-            story.append(Paragraph("<font color='#dc2626'><i>* Red bounding overlays indicate exact non-compliant or missing mandatory declarations identified during OCR audit.</i></font>", body_style))
-        else:
-            story.append(Paragraph("<font color='#16a34a'><i>* Clean product snapshot: No statutory non-compliances detected on inspected package panel.</i></font>", body_style))
+    created_temp_files = []
+    
+    if images_list and len(images_list) > 1:
+        story.append(Paragraph(f"<i>Documenting {len(images_list)} captured packaging panel views:</i>", body_style))
+        story.append(Spacer(1, 4))
+        
+        for idx, img_info in enumerate(images_list):
+            panel_key = img_info.get('panel_side', 'front')
+            panel_title = PANEL_TITLE_MAP.get(panel_key, f"Panel View: {panel_key.title()}")
+            temp_path = create_annotated_product_image(inspection_data, img_info.get('filepath'), panel_label=panel_title)
+            created_temp_files.append(temp_path)
             
-    except Exception as e:
-        story.append(Paragraph(f"<i>Image visualization preview unavailable: {e}</i>", body_style))
+            try:
+                story.append(Paragraph(f"<b>View {idx+1}: {panel_title}</b>", body_bold))
+                img_elem = RLImage(temp_path, width=440, height=155)
+                img_table = Table([[img_elem]], colWidths=[540])
+                img_table.setStyle(TableStyle([
+                    ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#0f172a')),
+                    ('PADDING', (0,0), (-1,-1), 3),
+                    ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#334155'))
+                ]))
+                story.append(img_table)
+                story.append(Spacer(1, 6))
+            except Exception as e:
+                story.append(Paragraph(f"<i>Panel image preview unavailable: {e}</i>", body_style))
+    else:
+        single_path = images_list[0].get('filepath') if images_list else inspection_data.get('image_filepath')
+        temp_path = create_annotated_product_image(inspection_data, single_path, panel_label="Front Panel (PDP)")
+        created_temp_files.append(temp_path)
+        try:
+            img_elem = RLImage(temp_path, width=440, height=170)
+            img_table = Table([[img_elem]], colWidths=[540])
+            img_table.setStyle(TableStyle([
+                ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#0f172a')),
+                ('PADDING', (0,0), (-1,-1), 4),
+                ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#334155'))
+            ]))
+            story.append(img_table)
+        except Exception as e:
+            story.append(Paragraph(f"<i>Image visualization preview unavailable: {e}</i>", body_style))
+
+    if status == 'NON_COMPLIANT':
+        story.append(Paragraph("<font color='#dc2626'><i>* Red bounding overlays indicate exact non-compliant or missing mandatory declarations identified during OCR audit.</i></font>", body_style))
+    else:
+        story.append(Paragraph("<font color='#16a34a'><i>* Clean product snapshot: No statutory non-compliances detected on inspected package panel.</i></font>", body_style))
         
     story.append(Spacer(1, 10))
 
@@ -318,9 +361,10 @@ def generate_pdf_report(inspection_data: dict, output_path: str):
     # Build Document
     doc.build(story)
     
-    # Clean up temporary annotated image
-    if os.path.exists(temp_annotated_img):
-        try:
-            os.remove(temp_annotated_img)
-        except Exception:
-            pass
+    # Clean up temporary annotated images
+    for t_file in created_temp_files:
+        if os.path.exists(t_file):
+            try:
+                os.remove(t_file)
+            except Exception:
+                pass

@@ -575,9 +575,16 @@ def get_pdf_report(inspection_id: int, db: Session = Depends(get_db)):
             "details": r.details or ""
         })
         
-    # Find latest uploaded product image if exists
-    img_record = db.query(ProductImage).filter(ProductImage.inspection_id == inspection_id).order_by(ProductImage.id.desc()).first()
-    image_filepath = img_record.filepath if img_record and os.path.exists(img_record.filepath) else None
+    # Find all uploaded product images across all packaging panels
+    images_records = db.query(ProductImage).filter(ProductImage.inspection_id == inspection_id).order_by(ProductImage.id.asc()).all()
+    images_list = []
+    for img in images_records:
+        if os.path.exists(img.filepath):
+            images_list.append({
+                "panel_side": img.panel_side,
+                "filepath": img.filepath,
+                "filename": img.filename
+            })
 
     pdf_payload = {
         "id": db_inspection.id,
@@ -589,7 +596,8 @@ def get_pdf_report(inspection_id: int, db: Session = Depends(get_db)):
         "product": product_data,
         "declarations": decls_data,
         "compliance_results": rules_data,
-        "image_filepath": image_filepath
+        "images": images_list,
+        "image_filepath": images_list[0]["filepath"] if images_list else None
     }
     
     output_dir = "./reports"
