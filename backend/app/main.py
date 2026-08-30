@@ -8,16 +8,18 @@ from rapidfuzz import fuzz
 import os
 import shutil
 
-from app.database import init_db, get_db, SessionLocal, User, Product, Inspection, ProductImage, Declaration, ComplianceResult, OCRResult, sync_inspection_fts
+from app.database import init_db, get_db, SessionLocal, User, Product, Inspection, ProductImage, Declaration, ComplianceResult, OCRResult, StatutoryRule, sync_inspection_fts
 from app.schemas import UserResponse, UserCreate, ProductResponse, ProductCreate, InspectionResponse, InspectionCreate
 from app.auth import hash_password, verify_password, create_access_token, get_current_user, get_current_user_optional
 
 # Pipeline imports
 from app.pipeline.quality import analyze_image_quality
 from app.pipeline.preprocess import correct_skew, apply_contrast_enhancement
+from app.pipeline.geometry import calculate_pdp_scale, suppress_glare, correct_perspective_quad, unwarp_cylindrical_label
+from app.pipeline.dimensions import calculate_font_dimensions, evaluate_rule_8_clearance
 from app.pipeline.ocr_engine import perform_ocr
 from app.extraction.parser import parse_ocr_results
-from app.rules.engine import evaluate_compliance
+from app.rules.engine import evaluate_compliance, classify_commodity
 from app.pipeline.pdf_report import generate_pdf_report
 
 app = FastAPI(title="PaarakhMetric Backend", version="1.0")
@@ -471,10 +473,32 @@ async def upload_image(
             db.add(db_decl)
     db.commit()
 
-    # 6. Execute Legal Metrology Rule Engine (Rule 6 + Rule 7 Table-I)
-    rule_outputs = evaluate_compliance(parsed_decls, pdp_area_cm2=150.0)
+    # 6. Automated Geometric Scale & Rule 7/8 Dimension Calculations
+    import cv2
+    img_cv = cv2.imread(filepath)
+    scale_info = calculate_pdp_scale(img_cv) if img_cv is not None else {"pdp_area_cm2": 150.0, "scale_px_per_mm": 2.5}
     
-    # Save or update compliance results
+    font_metrics = calculate_font_dimensions(
+        ocr_raw,
+        pdp_area_cm2=scale_info["pdp_area_cm2"],
+        scale_px_per_mm=scale_info["scale_px_per_mm"]
+    )
+    
+    qty_token = next((item for item in ocr_raw if any(k in item.get("text", "").lower() for k in ["net", "wt", "qty", "quantity"])), None)
+    qty_bbox = qty_token["bounding_box"] if qty_token else {}
+    all_bboxes = [item["bounding_box"] for item in ocr_raw]
+    numeral_h_px = font_metrics["measured_font_height_mm"] * scale_info["scale_px_per_mm"]
+    rule_8_eval = evaluate_rule_8_clearance(qty_bbox, all_bboxes, numeral_h_px)
+
+    # 7. Execute Consolidated 17 Legal Metrology Rules Engine
+    rule_outputs = evaluate_compliance(
+        parsed_decls,
+        pdp_area_cm2=scale_info["pdp_area_cm2"],
+        measured_font_height_mm=font_metrics["measured_font_height_mm"],
+        rule_8_clearance_status=rule_8_eval["status"]
+    )
+    
+    # Save or update compliance results in DB
     for rule_res in rule_outputs["results"]:
         existing_res = db.query(ComplianceResult).filter(
             ComplianceResult.inspection_id == inspection_id,
@@ -498,7 +522,7 @@ async def upload_image(
     db.commit()
     sync_inspection_fts(db, inspection_id)
     
-    # Format bboxes for visualizer
+    # Format bboxes for interactive visualizer
     visualizer_boxes = []
     for item in ocr_raw:
         txt = item["text"].lower()
@@ -536,8 +560,11 @@ async def upload_image(
     
     return {
         "status": rule_outputs["overall_status"],
-        "message": "Image processed. OCR & compliance checks succeeded.",
+        "message": "Image processed. PaddleOCR / RapidOCR & 17 statutory compliance checks succeeded.",
         "quality": quality_metrics,
+        "scale": scale_info,
+        "font_dimensions": font_metrics,
+        "rule_8_clearance": rule_8_eval,
         "declarations": parsed_decls,
         "rules_results": rule_outputs["results"],
         "category": detected_category,
@@ -610,3 +637,22 @@ def get_pdf_report(inspection_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {err}")
         
     return FileResponse(pdf_path, media_type="application/pdf", filename=f"PaarakhMetric_Report_{inspection_id}.pdf")
+
+@app.get("/rules")
+def get_rules(db: Session = Depends(get_db)):
+    """Retrieve all 17 statutory Legal Metrology rules from the database."""
+    rules = db.query(StatutoryRule).order_by(StatutoryRule.rule_number).all()
+    return [{
+        "rule_number": r.rule_number,
+        "rule_id": r.rule_id,
+        "code": r.code,
+        "field": r.field,
+        "name": r.name,
+        "year": r.year,
+        "required": r.required,
+        "severity": r.severity,
+        "description": r.description,
+        "source": r.source,
+        "applies_to": r.applies_to
+    } for r in rules]
+

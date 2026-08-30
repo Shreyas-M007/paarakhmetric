@@ -1,5 +1,7 @@
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Text
+import json
+import os
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 from app.config import settings
@@ -27,6 +29,21 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="officer")  # admin, supervisor, officer
+
+class StatutoryRule(Base):
+    __tablename__ = "statutory_rules"
+    id = Column(Integer, primary_key=True, index=True)
+    rule_number = Column(Integer, unique=True, index=True)
+    rule_id = Column(String, unique=True, index=True, nullable=False)  # e.g. Rule 6(1)(a)
+    code = Column(String, index=True, nullable=False)  # e.g. PC-MFG-001
+    field = Column(String, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    year = Column(String, nullable=False)
+    required = Column(Boolean, default=True)
+    severity = Column(String, default="high")
+    description = Column(Text, nullable=False)
+    source = Column(String, nullable=False)
+    applies_to = Column(String, default="all")
 
 class Product(Base):
     __tablename__ = "products"
@@ -95,7 +112,7 @@ class ComplianceResult(Base):
     __tablename__ = "compliance_results"
     id = Column(Integer, primary_key=True, index=True)
     inspection_id = Column(Integer, ForeignKey("inspections.id"), nullable=False)
-    rule_id = Column(String, nullable=False)  # PC-MRP-001, etc.
+    rule_id = Column(String, nullable=False)  # PC-MRP-007, etc.
     status = Column(String, default="REVIEW")  # PASS, FAIL, REVIEW, NOT_APPLICABLE
     details = Column(Text, nullable=True)
     checked_at = Column(DateTime, default=datetime.utcnow)
@@ -106,6 +123,8 @@ from sqlalchemy import text
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    
+    # 1. Initialize FTS5 virtual table
     with engine.connect() as conn:
         try:
             conn.execute(text("""
@@ -125,6 +144,49 @@ def init_db():
             conn.commit()
         except Exception:
             pass
+
+    # 2. Seed / Synchronize the 17 Statutory Rules
+    rules_json_path = os.path.join(os.path.dirname(__file__), "rules", "rules_matrix.json")
+    if os.path.exists(rules_json_path):
+        db = SessionLocal()
+        try:
+            with open(rules_json_path, "r", encoding="utf-8") as f:
+                rules_data = json.load(f)
+                
+            for r in rules_data:
+                existing = db.query(StatutoryRule).filter(StatutoryRule.rule_id == r["rule_id"]).first()
+                if not existing:
+                    rule_record = StatutoryRule(
+                        rule_number=r.get("rule_number"),
+                        rule_id=r["rule_id"],
+                        code=r["code"],
+                        field=r["field"],
+                        name=r["name"],
+                        year=r["year"],
+                        required=r.get("required", True),
+                        severity=r.get("severity", "high"),
+                        description=r["description"],
+                        source=r["source"],
+                        applies_to=r.get("applies_to", "all")
+                    )
+                    db.add(rule_record)
+                else:
+                    existing.rule_number = r.get("rule_number")
+                    existing.code = r["code"]
+                    existing.field = r["field"]
+                    existing.name = r["name"]
+                    existing.year = r["year"]
+                    existing.required = r.get("required", True)
+                    existing.severity = r.get("severity", "high")
+                    existing.description = r["description"]
+                    existing.source = r["source"]
+                    existing.applies_to = r.get("applies_to", "all")
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"[WARN] Error seeding statutory rules: {e}")
+        finally:
+            db.close()
 
 def sync_inspection_fts(db: Session, inspection_id: int):
     """Synchronize an inspection and its OCR/compliance results into the FTS5 search index."""

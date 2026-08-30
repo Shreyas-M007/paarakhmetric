@@ -1,19 +1,40 @@
 import re
-from rapidfuzz import process, fuzz
+from typing import List, Dict, Any
+from rapidfuzz import fuzz, process
 
-# Regex definitions
+# Statutory Regex Patterns
 MRP_PATTERN = re.compile(
     r'(?:mrp|m\.r\.p\.|retail\s*price|max[a-z]*\s*retail\s*price)\s*(?:rs\.?|inr|rupees|₹)?\s*([\d.,]+)', 
     re.IGNORECASE
 )
 
 QTY_PATTERN = re.compile(
-    r'(?:net\s*qty|net\s*quantity|net\s*wt|net\s*weight|weight|qty)\s*:?\s*([\d.,]+)\s*(kg|g|gm|gms|ml|l|liter|litres|pcs|units|u)', 
+    r'(?:net\s*qty|net\s*quantity|net\s*wt|net\s*weight|weight|volume|qty|quantity)\s*:?\s*([\d.,]+)\s*(kg|g|gm|gms|ml|l|liter|litres|ltr|ltrs|pcs|units|u|m|cm|mm|n)\b', 
     re.IGNORECASE
 )
 
 DATE_PATTERN = re.compile(
-    r'(?:pkd|packed|mfg|mfd|date\s*of\s*pack(?:ing)?|mfg\s*date)\s*:?\s*(\d{2}[/\-]\d{4}|\d{2}[/\-]\d{2}|[a-z]{3,9}\s*\d{4}|\d{4})',
+    r'(?:pkd|packed|mfg|mfd|date\s*of\s*pack(?:ing)?|mfg\s*date|packaging\s*date)\s*:?\s*(\d{2}[/\-]\d{4}|\d{2}[/\-]\d{2}|[a-z]{3,9}\s*\d{4}|\d{4})',
+    re.IGNORECASE
+)
+
+BEST_BEFORE_PATTERN = re.compile(
+    r'(?:best\s*before|use\s*by|expiry|exp\s*date|exp\.?)\s*:?\s*([a-z0-9\s/.\-]+)',
+    re.IGNORECASE
+)
+
+COO_PATTERN = re.compile(
+    r'(?:country\s*of\s*origin|made\s*in|origin|produced\s*in|assembled\s*in)\s*:?\s*([a-zA-Z\s]+)',
+    re.IGNORECASE
+)
+
+USP_PATTERN = re.compile(
+    r'(?:unit\s*sale\s*price|usp)\s*:?\s*(?:rs\.?|₹)?\s*([\d.,]+\s*/\s*(?:g|kg|ml|l|unit|piece|cm|m|n))',
+    re.IGNORECASE
+)
+
+DIMENSIONS_PATTERN = re.compile(
+    r'(?:dimensions|size|dim)\s*:?\s*(\d+[\d.,]*\s*(?:cm|mm|m|inch)\s*[xX*]\s*\d+[\d.,]*\s*(?:cm|mm|m|inch)(?:\s*[xX*]\s*\d+[\d.,]*\s*(?:cm|mm|m|inch))?)',
     re.IGNORECASE
 )
 
@@ -23,80 +44,149 @@ EMAIL_PATTERN = re.compile(
 )
 
 PHONE_PATTERN = re.compile(
-    r'(?:1800\s*\d{3}\s*\d{4}|\d{3,5}[\-\s]\d{6,8}|\+91\s*\d{10})',
+    r'(?:1800[\s\-]*\d{3}[\s\-]*\d{4}|\d{3,5}[\-\s]\d{6,8}|\+91[\s\-]*\d{10}|\b\d{10}\b)',
     re.IGNORECASE
 )
 
-def parse_ocr_results(ocr_items: list) -> dict:
+def parse_ocr_results(ocr_items: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Parses full OCR text lines to identify mandatory Legal Metrology fields.
-    Returns structured results:
-    {
-        "mrp": {"value": str, "confidence": float, "original_text": str},
-        "net_quantity": {"value": str, "confidence": float, "original_text": str},
-        "packing_date": {"value": str, "confidence": float, "original_text": str},
-        "consumer_care": {"value": str, "confidence": float, "original_text": str},
-        "manufacturer": {"value": str, "confidence": float, "original_text": str}
-    }
+    Parses OCR text tokens into structured Legal Metrology statutory fields.
+    Applies Levenshtein-distance fuzzy matching with RapidFuzz for noisy packaging text.
     """
     results = {
         "mrp": {"value": "", "confidence": 0.0, "original_text": ""},
         "net_quantity": {"value": "", "confidence": 0.0, "original_text": ""},
         "packing_date": {"value": "", "confidence": 0.0, "original_text": ""},
+        "best_before": {"value": "", "confidence": 0.0, "original_text": ""},
         "consumer_care": {"value": "", "confidence": 0.0, "original_text": ""},
-        "manufacturer": {"value": "", "confidence": 0.0, "original_text": ""}
+        "manufacturer": {"value": "", "confidence": 0.0, "original_text": ""},
+        "country_of_origin": {"value": "", "confidence": 0.0, "original_text": ""},
+        "generic_name": {"value": "", "confidence": 0.0, "original_text": ""},
+        "unit_sale_price": {"value": "", "confidence": 0.0, "original_text": ""},
+        "dimensions": {"value": "", "confidence": 0.0, "original_text": ""}
     }
 
-    # Aggregate text for holistic search
-    full_text_lines = [item["text"] for item in ocr_items]
-    
+    full_text_combined = " ".join([item.get("text", "") for item in ocr_items])
+
     for item in ocr_items:
-        text = item["text"]
-        conf = item["confidence"]
-        
-        # 1. Check MRP
+        text = item.get("text", "").strip()
+        conf = float(item.get("confidence", 0.0))
+        text_lower = text.lower()
+
+        # 1. MRP (Rule 6(1)(e))
         mrp_match = MRP_PATTERN.search(text)
         if mrp_match and conf > results["mrp"]["confidence"]:
-            val = f"₹{mrp_match.group(1).strip()}"
-            results["mrp"] = {"value": val, "confidence": conf, "original_text": text}
-            
-        # 2. Check Net Quantity
+            # Normalize noisy OCR: R5 -> Rs., O -> 0
+            price_clean = mrp_match.group(1).strip().replace("O", "0").replace("o", "0")
+            results["mrp"] = {
+                "value": f"₹{price_clean}",
+                "confidence": conf,
+                "original_text": text
+            }
+
+        # 2. Net Quantity (Rule 6(1)(c))
         qty_match = QTY_PATTERN.search(text)
         if qty_match and conf > results["net_quantity"]["confidence"]:
-            val = f"{qty_match.group(1).strip()} {qty_match.group(2).strip()}"
-            results["net_quantity"] = {"value": val, "confidence": conf, "original_text": text}
-            
-        # 3. Check Date of Packing
+            raw_val = qty_match.group(1).strip().replace("O", "0")
+            unit_val = qty_match.group(2).strip().lower()
+            results["net_quantity"] = {
+                "value": f"{raw_val} {unit_val}",
+                "confidence": conf,
+                "original_text": text
+            }
+
+        # 3. Date of Packing / Manufacture (Rule 6(1)(d))
         date_match = DATE_PATTERN.search(text)
         if date_match and conf > results["packing_date"]["confidence"]:
-            results["packing_date"] = {"value": date_match.group(1).strip(), "confidence": conf, "original_text": text}
+            results["packing_date"] = {
+                "value": date_match.group(1).strip(),
+                "confidence": conf,
+                "original_text": text
+            }
 
-        # 4. Check Consumer Care Info
+        # 4. Best Before / Use By (Rule 6(1)(da))
+        bb_match = BEST_BEFORE_PATTERN.search(text)
+        if bb_match and conf > results["best_before"]["confidence"]:
+            results["best_before"] = {
+                "value": bb_match.group(0).strip(),
+                "confidence": conf,
+                "original_text": text
+            }
+
+        # 5. Country of Origin (Rule 6(1)(aa))
+        coo_match = COO_PATTERN.search(text)
+        if coo_match and conf > results["country_of_origin"]["confidence"]:
+            results["country_of_origin"] = {
+                "value": coo_match.group(1).strip().title(),
+                "confidence": conf,
+                "original_text": text
+            }
+
+        # 6. Unit Sale Price (Rule 6(1)(11))
+        usp_match = USP_PATTERN.search(text)
+        if usp_match and conf > results["unit_sale_price"]["confidence"]:
+            results["unit_sale_price"] = {
+                "value": f"₹{usp_match.group(1).strip()}",
+                "confidence": conf,
+                "original_text": text
+            }
+
+        # 7. Dimensions (Rule 6(1)(f))
+        dim_match = DIMENSIONS_PATTERN.search(text)
+        if dim_match and conf > results["dimensions"]["confidence"]:
+            results["dimensions"] = {
+                "value": dim_match.group(1).strip(),
+                "confidence": conf,
+                "original_text": text
+            }
+
+        # 8. Consumer Care Details (Rule 6(2))
         email_match = EMAIL_PATTERN.search(text)
         phone_match = PHONE_PATTERN.search(text)
-        if (email_match or phone_match) and conf > results["consumer_care"]["confidence"]:
+        if (email_match or phone_match or "care" in text_lower or "helpline" in text_lower) and conf > results["consumer_care"]["confidence"]:
             vals = []
             if phone_match:
                 vals.append(phone_match.group(0))
             if email_match:
                 vals.append(email_match.group(0))
-            results["consumer_care"] = {"value": ", ".join(vals), "confidence": conf, "original_text": text}
-            
-    # Fuzzy Matching for manufacturer identifiers (e.g. Mfd by, Packed by, Importer)
-    mfg_keywords = ["mfd by", "manufactured by", "packed by", "imported by", "mfg. by"]
+            if not vals:
+                vals.append(text)
+            results["consumer_care"] = {
+                "value": ", ".join(vals),
+                "confidence": conf,
+                "original_text": text
+            }
+
+    # Fuzzy Matching for Manufacturer / Packer (Rule 6(1)(a))
+    mfg_keywords = ["mfd by", "manufactured by", "packed by", "marketed by", "imported by", "mfg. by", "pkd by", "packer"]
     best_mfg_line = None
     best_mfg_conf = 0.0
-    
+
     for item in ocr_items:
-        text = item["text"].lower()
-        # Find if any keyword is in text
+        text = item.get("text", "")
+        text_lower = text.lower()
         for kw in mfg_keywords:
-            score = fuzz.partial_ratio(kw, text)
-            if score > 80 and item["confidence"] > best_mfg_conf:
-                best_mfg_line = item["text"]
-                best_mfg_conf = item["confidence"]
-                
+            score = fuzz.partial_ratio(kw, text_lower)
+            if score > 75 and item.get("confidence", 0.0) >= best_mfg_conf:
+                best_mfg_line = text
+                best_mfg_conf = float(item.get("confidence", 0.0))
+
     if best_mfg_line:
-        results["manufacturer"] = {"value": best_mfg_line, "confidence": best_mfg_conf, "original_text": best_mfg_line}
+        results["manufacturer"] = {
+            "value": best_mfg_line,
+            "confidence": best_mfg_conf,
+            "original_text": best_mfg_line
+        }
+
+    # Extract Generic Commodity Name (Rule 6(1)(b)) if first prominent headline
+    if ocr_items and not results["generic_name"]["value"]:
+        # Top prominent text is often generic identity or brand + generic
+        first_line = ocr_items[0].get("text", "")
+        if first_line and not any(k in first_line.lower() for k in ["mrp", "net", "pkd", "mfd", "care"]):
+            results["generic_name"] = {
+                "value": first_line,
+                "confidence": float(ocr_items[0].get("confidence", 0.9)),
+                "original_text": first_line
+            }
 
     return results
