@@ -102,9 +102,6 @@ export default function InspectionDetailScreen({
               <p className="text-[10px] text-fg-muted mt-1">Bounding overlays display detected declarations</p>
             </div>
           )}
-        </div>
-      </section>
-
 
           {/* Bounding box overlays */}
           {capturedImage && inspection.declarations?.map((decl: any) => {
@@ -127,6 +124,7 @@ export default function InspectionDetailScreen({
 
       {/* Declarations table */}
       <section className="flex flex-col gap-3">
+
         <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">Statutory Declarations</span>
         <div className="flex flex-col gap-2">
           {inspection.declarations?.map((decl: any) => {

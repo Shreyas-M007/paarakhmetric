@@ -111,9 +111,14 @@ export default function InspectionsScreen({
 
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">{t.ledgerResults || "Ledger Results"}</span>
-          <span className="text-[14px] text-fg-muted whitespace-nowrap">{list.length} {t.shown || "shown"}</span>
+          <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">
+            {language === 'hi' ? 'लेज़र परिणाम' : language === 'kn' ? 'ಲೆಡ್ಜರ್ ಫಲಿತಾಂಶಗಳು' : 'Ledger Results'}
+          </span>
+          <span className="text-[14px] text-fg-muted whitespace-nowrap">
+            {list.length} {language === 'hi' ? 'दिखाया गया' : language === 'kn' ? 'ತೋರಿಸಲಾಗಿದೆ' : 'shown'}
+          </span>
         </div>
+
         <InspectionList 
           title=""
           inspections={list} 
