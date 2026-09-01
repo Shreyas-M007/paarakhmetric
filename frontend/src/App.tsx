@@ -154,7 +154,7 @@ async function optimizeImageForVision(base64: string): Promise<string> {
     try {
       const img = new Image();
       img.onload = () => {
-        const maxDim = 1200;
+        const maxDim = 2048;
         let width = img.width;
         let height = img.height;
 
@@ -174,7 +174,7 @@ async function optimizeImageForVision(base64: string): Promise<string> {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
+          resolve(canvas.toDataURL('image/jpeg', 0.92));
         } else {
           resolve(base64);
         }
@@ -193,47 +193,53 @@ async function runGeminiVisionAnalysis(apiKey: string, base64Image: string, chos
   const mimeType = optimizedBase64.includes(';') ? optimizedBase64.split(';')[0].split(':')[1] : 'image/jpeg';
 
   const prompt = `You are an expert Legal Metrology (LMPC Act 2011 & Packaged Commodities Rules) inspector in India.
-Carefully inspect every single label, mark, text, date, and declaration on this package image.
+Carefully inspect and transcribe the actual printed declarations on this product package image.
 
 Target Hint: "${chosenName || 'Packaged Commodity'}", Category: "${chosenCat || 'General FMCG'}"
 
-Extract the 5 statutory declarations under Rule 6:
-1. mrp (Maximum Retail Price in INR ₹, check if inclusive of all taxes)
-2. net_quantity (Net Quantity with SI unit)
-3. packing_date (Month & Year of packing/import)
-4. manufacturer (Complete name & address of manufacturer/packer)
-5. consumer_care (Consumer helpline phone or email)
+Find and extract the exact statutory values from the package label:
+1. mrp: The exact Maximum Retail Price printed on the package (e.g. "₹120.00", "Rs. 150.00", "₹149 (incl. of all taxes)"). Look for "MRP", "M.R.P.", "Max. Retail Price", "Rs.", "₹".
+2. net_quantity: The exact net weight / volume with standard SI unit (e.g. "500 g", "1 kg", "200 ml", "1 L", "10 Units"). Look for "Net Qty", "Net Weight", "Net Vol", "Net Content".
+3. packing_date: The exact Month and Year of packing / manufacture / import (e.g. "08/2026", "AUG 2026", "MFD: 07/2026", "PKD: 09/2026"). Look for "PKD", "MFD", "Mfg Date", "Packed On".
+4. manufacturer: The exact name and complete postal address of the manufacturer / packer / marketer printed on the label. Look for "Mfd by", "Packed by", "Manufactured by", "Marketed by".
+5. consumer_care: The customer care phone number, toll-free number, or email address printed on the package. Look for "Customer Care", "Consumer Care", "Helpline", "Toll Free", "Email".
 
-Return JSON ONLY with this schema:
+Rules:
+- Transcribe the REAL printed text from the image. If a declaration is visible on the package, set status to "VALIDATED" and include the exact extracted text in "value" and "original_text".
+- If a declaration is missing or completely unreadable, set "value" to "" and status to "MISSING" or "POTENTIAL_VIOLATION".
+- In "product_name", extract the real brand and commodity name printed on the package.
+- DO NOT return placeholder text or dots. Output the real values.
+
+Return JSON ONLY matching this schema:
 {
-  "product_name": "${chosenName || 'Scanned Packaged Commodity'}",
-  "category": "${chosenCat || 'General FMCG'}",
-  "manufacturer": "Extracted manufacturer name",
-  "overall_status": "COMPLIANT",
+  "product_name": string,
+  "category": string,
+  "manufacturer": string,
+  "overall_status": "COMPLIANT" | "NON_COMPLIANT" | "REQUIRES_REVIEW",
   "declarations": [
-    { "field_name": "mrp", "value": "₹...", "status": "VALIDATED", "confidence": 0.96, "original_text": "text" },
-    { "field_name": "net_quantity", "value": "...", "status": "VALIDATED", "confidence": 0.95, "original_text": "text" },
-    { "field_name": "packing_date", "value": "...", "status": "VALIDATED", "confidence": 0.93, "original_text": "text" },
-    { "field_name": "manufacturer", "value": "...", "status": "VALIDATED", "confidence": 0.92, "original_text": "text" },
-    { "field_name": "consumer_care", "value": "...", "status": "VALIDATED", "confidence": 0.91, "original_text": "text" }
+    { "field_name": "mrp", "value": string, "status": "VALIDATED" | "POTENTIAL_VIOLATION" | "MISSING", "confidence": number, "original_text": string },
+    { "field_name": "net_quantity", "value": string, "status": "VALIDATED" | "POTENTIAL_VIOLATION" | "MISSING", "confidence": number, "original_text": string },
+    { "field_name": "packing_date", "value": string, "status": "VALIDATED" | "POTENTIAL_VIOLATION" | "MISSING", "confidence": number, "original_text": string },
+    { "field_name": "manufacturer", "value": string, "status": "VALIDATED" | "POTENTIAL_VIOLATION" | "MISSING", "confidence": number, "original_text": string },
+    { "field_name": "consumer_care", "value": string, "status": "VALIDATED" | "POTENTIAL_VIOLATION" | "MISSING", "confidence": number, "original_text": string }
   ],
   "compliance_results": [
-    { "rule_id": "PC-MRP-001", "field": "mrp", "status": "PASS", "details": "MRP declared inclusive of taxes" },
-    { "rule_id": "PC-QTY-002", "field": "net_quantity", "status": "PASS", "details": "Standard SI unit verified" },
-    { "rule_id": "PC-DATE-003", "field": "packing_date", "status": "PASS", "details": "Month & Year verified" },
-    { "rule_id": "PC-MFG-004", "field": "manufacturer", "status": "PASS", "details": "Complete manufacturer address verified" },
-    { "rule_id": "PC-CARE-005", "field": "consumer_care", "status": "PASS", "details": "Consumer grievance redressal verified" }
+    { "rule_id": "PC-MRP-001", "field": "mrp", "status": "PASS" | "FAIL", "details": string },
+    { "rule_id": "PC-QTY-002", "field": "net_quantity", "status": "PASS" | "FAIL", "details": string },
+    { "rule_id": "PC-DATE-003", "field": "packing_date", "status": "PASS" | "FAIL", "details": string },
+    { "rule_id": "PC-MFG-004", "field": "manufacturer", "status": "PASS" | "FAIL", "details": string },
+    { "rule_id": "PC-CARE-005", "field": "consumer_care", "status": "PASS" | "FAIL", "details": string }
   ]
 }`;
 
-  // Prioritize ultra-fast gemini-3.5-flash with timeout protection
+  // Prioritize fast gemini-3.5-flash with timeout protection
   const models = ['gemini-3.5-flash', 'gemini-3.6-flash'];
   let lastError: any = null;
 
   for (const model of models) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`, {
         method: 'POST',
@@ -246,7 +252,7 @@ Return JSON ONLY with this schema:
               { inline_data: { mime_type: mimeType, data: cleanBase64 } }
             ]
           }],
-          generationConfig: { response_mime_type: "application/json" }
+          generationConfig: { response_mime_type: "application/json", temperature: 0.1 }
         })
       });
 
@@ -266,6 +272,7 @@ Return JSON ONLY with this schema:
 
   throw lastError || new Error("Gemini Vision API execution failed");
 }
+
 
 
 export default function App() {
