@@ -11,16 +11,19 @@
     --gesso-font-body: "Switzer", system-ui, -apple-system, sans-serif;
   }
 
-  /* Theme: Civic Ledger (Default) */
-  :root[data-theme="civic-ledger"] {
+  /* Theme: Dark Noir (Default) */
+  :root,
+  :root[data-theme="default-noir"],
+  :root[data-theme="civic-ledger"],
+  :root[data-theme="high-contrast"] {
     --gesso-canvas: #090D10;
-    --gesso-surface: #182026;
-    --gesso-surface-elevated: #222C34;
-    --gesso-surface-recessed: #0c1216;
+    --gesso-surface: #141A1F;
+    --gesso-surface-elevated: #1E262F;
+    --gesso-surface-recessed: #080B0E;
     --gesso-fg: #FFFFFF;
     --gesso-fg-muted: #8E9EA8;
     --gesso-divider: rgba(255,255,255,0.08);
-    --gesso-accent: #F4C210;
+    --gesso-accent: #F59E0B;
     --gesso-accent-2: #38BDF8;
     --gesso-on-accent: #000000;
     --gesso-success: #22C55E;
@@ -28,91 +31,39 @@
     --gesso-error: #EF4444; /* Vibrant distinct red */
     --gesso-primary: var(--gesso-accent);
     --gesso-secondary: var(--gesso-accent-2);
-    --gesso-radius-sm: 4px; 
-    --gesso-radius-md: 8px; 
-    --gesso-radius-lg: 14px; 
+    --gesso-radius-sm: 6px; 
+    --gesso-radius-md: 12px; 
+    --gesso-radius-lg: 18px; 
     --gesso-radius-full: 9999px;
     --gesso-shadow-sm: none; 
-    --gesso-shadow-md: 0 4px 12px rgba(0,0,0,0.18); 
-    --gesso-shadow-lg: 0 8px 24px rgba(0,0,0,0.3);
+    --gesso-shadow-md: 0 4px 12px rgba(0,0,0,0.25); 
+    --gesso-shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
   }
 
-  /* Theme: Default Noir */
-  :root[data-theme="default-noir"] {
-    --gesso-canvas: #000000;
-    --gesso-surface: #1C1C1E;
-    --gesso-surface-elevated: #2C2C2E;
-    --gesso-surface-recessed: #0A0A0C;
-    --gesso-fg: #FFFFFF;
-    --gesso-fg-muted: #8E8E93;
-    --gesso-divider: rgba(255,255,255,0.08);
-    --gesso-accent: #E89A2C;
-    --gesso-accent-2: #3B82F6;
-    --gesso-on-accent: #000000;
-    --gesso-success: #22C55E;
-    --gesso-warning: #F59E0B;
-    --gesso-error: #EF4444;
-    --gesso-primary: var(--gesso-accent);
-    --gesso-secondary: var(--gesso-accent-2);
-    --gesso-radius-sm: 8px;
-    --gesso-radius-md: 16px;
-    --gesso-radius-lg: 24px;
-    --gesso-radius-full: 9999px;
-    --gesso-shadow-sm: none;
-    --gesso-shadow-md: none;
-    --gesso-shadow-lg: 0 1px 2px rgba(0,0,0,0.04);
-  }
-
-  /* Theme: Daylight Registry */
+  /* Theme: Daylight (Crisp Modern White) */
   :root[data-theme="daylight-registry"] {
-    --gesso-canvas: #F5F4F1;
-    --gesso-surface: #ECEAE4;
-    --gesso-surface-elevated: #DDD6CE;
-    --gesso-surface-recessed: #F5F4F1;
-    --gesso-fg: #171511;
-    --gesso-fg-muted: #716D62;
-    --gesso-divider: rgba(0,0,0,0.08);
-    --gesso-accent: #B54708;
-    --gesso-accent-2: #1A4731;
+    --gesso-canvas: #FFFFFF;
+    --gesso-surface: #F8FAFC;
+    --gesso-surface-elevated: #FFFFFF;
+    --gesso-surface-recessed: #F1F5F9;
+    --gesso-fg: #0F172A;
+    --gesso-fg-muted: #475569;
+    --gesso-divider: #E2E8F0;
+    --gesso-accent: #D97706;
+    --gesso-accent-2: #0284C7;
     --gesso-on-accent: #FFFFFF;
-    --gesso-success: #15653A;
-    --gesso-warning: #92400E;
+    --gesso-success: #16A34A;
+    --gesso-warning: #D97706;
     --gesso-error: #DC2626;
     --gesso-primary: var(--gesso-accent);
     --gesso-secondary: var(--gesso-accent-2);
-    --gesso-radius-sm: 8px;
-    --gesso-radius-md: 16px;
-    --gesso-radius-lg: 24px;
+    --gesso-radius-sm: 6px;
+    --gesso-radius-md: 12px;
+    --gesso-radius-lg: 18px;
     --gesso-radius-full: 9999px;
-    --gesso-shadow-sm: none;
-    --gesso-shadow-md: none;
-    --gesso-shadow-lg: 0 1px 2px rgba(0,0,0,0.04);
-  }
-
-  /* Theme: High Contrast */
-  :root[data-theme="high-contrast"] {
-    --gesso-canvas: #000000;
-    --gesso-surface: #000000;
-    --gesso-surface-elevated: #111111;
-    --gesso-surface-recessed: #000000;
-    --gesso-fg: #FFFFFF;
-    --gesso-fg-muted: #CCCCCC;
-    --gesso-divider: #FFFFFF;
-    --gesso-accent: #FFFF00;
-    --gesso-accent-2: #00FFFF;
-    --gesso-on-accent: #000000;
-    --gesso-success: #00FF00;
-    --gesso-warning: #FFFF00;
-    --gesso-error: #FF0000;
-    --gesso-primary: var(--gesso-accent);
-    --gesso-secondary: var(--gesso-accent-2);
-    --gesso-radius-sm: 0px;
-    --gesso-radius-md: 0px;
-    --gesso-radius-lg: 0px;
-    --gesso-radius-full: 0px;
-    --gesso-shadow-sm: none;
-    --gesso-shadow-md: none;
-    --gesso-shadow-lg: none;
+    --gesso-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --gesso-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+    --gesso-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   }
 
   body {

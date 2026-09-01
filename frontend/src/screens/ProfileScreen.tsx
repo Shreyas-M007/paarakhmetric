@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Landmark, Moon, Sun, Contrast, X, Check, Phone, Mail, CheckCircle2, Globe } from 'lucide-react';
+import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Moon, Sun, X, Check, Phone, Mail, CheckCircle2, Globe } from 'lucide-react';
+
 import StatGrid from '../components/StatGrid';
 
 import { Language, translations } from '../i18n';
@@ -82,21 +83,27 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
 
         <section className="bg-surface rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden border border-divider">
           <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Live Preview</span>
-          <span className="font-display text-[32px] font-bold leading-none capitalize">{currentTheme.replace('-', ' ')}</span>
-          <span className="text-[13px] text-fg-muted">Civic Ledger theme with vibrant high-visibility red error status and standard metrology accents.</span>
+          <span className="font-display text-[32px] font-bold leading-none capitalize">
+            {currentTheme === 'daylight-registry' ? 'Daylight (Crisp White)' : 'Dark Noir'}
+          </span>
+          <span className="text-[13px] text-fg-muted">
+            {currentTheme === 'daylight-registry'
+              ? 'Ultra-clean, modern crisp white workspace with high legibility and contrast.'
+              : 'Deep obsidian dark mode with amber accents and vibrant high-visibility status indicators.'}
+          </span>
           <div className="flex gap-2 mt-2">
-            <span className="w-9 h-9 rounded-sm flex-shrink-0 bg-canvas border border-divider"></span>
-            <span className="w-9 h-9 rounded-sm flex-shrink-0 bg-surface"></span>
-            <span className="w-9 h-9 rounded-sm flex-shrink-0 bg-fg"></span>
-            <span className="w-9 h-9 rounded-sm flex-shrink-0 bg-accent"></span>
-            <span className="w-9 h-9 rounded-sm flex-shrink-0 bg-fg-muted"></span>
+            <span className="w-9 h-9 rounded-lg flex-shrink-0 bg-canvas border border-divider"></span>
+            <span className="w-9 h-9 rounded-lg flex-shrink-0 bg-surface border border-divider"></span>
+            <span className="w-9 h-9 rounded-lg flex-shrink-0 bg-fg"></span>
+            <span className="w-9 h-9 rounded-lg flex-shrink-0 bg-accent"></span>
+            <span className="w-9 h-9 rounded-lg flex-shrink-0 bg-fg-muted"></span>
           </div>
           <div className="flex gap-2 mt-1 flex-wrap">
             <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-success">
               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Pass
             </span>
             <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-error font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Fail (Vibrant Red)
+              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Fail
             </span>
             <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-warning">
               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Review
@@ -108,15 +115,13 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
           <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Available Themes</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { id: 'civic-ledger', label: 'Civic Ledger', desc: 'Charcoal canvas · vibrant red fail status · gold accent', Icon: Landmark },
-              { id: 'default-noir', label: 'Default Noir', desc: 'Original PaarakhMetric deep black build', Icon: Moon },
-              { id: 'daylight-registry', label: 'Daylight Registry', desc: 'Light-surface variant for field desks', Icon: Sun },
-              { id: 'high-contrast', label: 'High Contrast', desc: 'Accessibility mode · maximum contrast glyphs', Icon: Contrast },
+              { id: 'default-noir', label: 'Dark Noir', desc: 'Deep obsidian dark mode with amber metrology accents', Icon: Moon },
+              { id: 'daylight-registry', label: 'Daylight (Clean White)', desc: 'Modern crisp white UI designed for maximum clarity', Icon: Sun },
             ].map(thm => (
               <button
                 key={thm.id}
                 onClick={() => { setTheme(thm.id); setView('profile'); }}
-                className={`flex items-center gap-4 bg-surface rounded-2xl p-5 text-left transition-all hover:bg-surface-elevated active:scale-99 border ${
+                className={`flex items-center gap-4 bg-surface rounded-2xl p-5 text-left transition-all hover:bg-surface-elevated active:scale-99 border cursor-pointer ${
                   currentTheme === thm.id ? 'border-accent bg-accent/5' : 'border-divider'
                 }`}
               >

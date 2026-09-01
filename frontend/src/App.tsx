@@ -197,7 +197,11 @@ export default function App() {
 
 
   // --- Theme ---
-  const [theme, setTheme] = useState<string>(() => localStorage.getItem('paarakhmetric_theme') || 'civic-ledger');
+  const [theme, setTheme] = useState<string>(() => {
+    const saved = localStorage.getItem('paarakhmetric_theme');
+    return saved === 'daylight-registry' ? 'daylight-registry' : 'default-noir';
+  });
+
 
   // --- Camera / Scan ---
   const [cameraActive, setCameraActive] = useState<boolean>(false);
