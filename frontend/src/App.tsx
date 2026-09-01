@@ -187,27 +187,45 @@ async function optimizeImageForVision(base64: string): Promise<string> {
   });
 }
 
-async function runGeminiVisionAnalysis(apiKey: string, base64Image: string, chosenName: string, chosenCat: string) {
-  const optimizedBase64 = await optimizeImageForVision(base64Image);
-  const cleanBase64 = optimizedBase64.includes(',') ? optimizedBase64.split(',')[1] : optimizedBase64;
-  const mimeType = optimizedBase64.includes(';') ? optimizedBase64.split(';')[0].split(':')[1] : 'image/jpeg';
+async function runGeminiVisionAnalysis(apiKey: string, imagesInput: string | string[], chosenName: string, chosenCat: string) {
+  const imagesList = Array.isArray(imagesInput) ? imagesInput : [imagesInput];
+  const validImages = imagesList.filter(Boolean);
+
+  if (validImages.length === 0) {
+    throw new Error("No images provided for analysis");
+  }
+
+  // Optimize all images concurrently
+  const optimizedImages = await Promise.all(validImages.map(img => optimizeImageForVision(img)));
+
+  const imageParts: any[] = [];
+  for (const optImg of optimizedImages) {
+    const cleanBase64 = optImg.includes(',') ? optImg.split(',')[1] : optImg;
+    const mimeType = optImg.includes(';') ? optImg.split(';')[0].split(':')[1] : 'image/jpeg';
+    imageParts.push({
+      inline_data: { mime_type: mimeType, data: cleanBase64 }
+    });
+  }
 
   const prompt = `You are an expert Legal Metrology (LMPC Act 2011 & Packaged Commodities Rules) inspector in India.
-Carefully inspect and transcribe the actual printed declarations on this product package image.
+You are provided with ${validImages.length} photo(s) showing different sides and panels of the SAME packaged product (for example: Front PDP, Back Label, Top/Cap batch stamping, and Bottom seal).
+
+Carefully examine and cross-reference ALL ${validImages.length} provided images together to find and extract the complete set of statutory declarations under Rule 6:
 
 Target Hint: "${chosenName || 'Packaged Commodity'}", Category: "${chosenCat || 'General FMCG'}"
 
-Find and extract the exact statutory values from the package label:
-1. mrp: The exact Maximum Retail Price printed on the package (e.g. "₹120.00", "Rs. 150.00", "₹149 (incl. of all taxes)"). Look for "MRP", "M.R.P.", "Max. Retail Price", "Rs.", "₹".
-2. net_quantity: The exact net weight / volume with standard SI unit (e.g. "500 g", "1 kg", "200 ml", "1 L", "10 Units"). Look for "Net Qty", "Net Weight", "Net Vol", "Net Content".
-3. packing_date: The exact Month and Year of packing / manufacture / import (e.g. "08/2026", "AUG 2026", "MFD: 07/2026", "PKD: 09/2026"). Look for "PKD", "MFD", "Mfg Date", "Packed On".
-4. manufacturer: The exact name and complete postal address of the manufacturer / packer / marketer printed on the label. Look for "Mfd by", "Packed by", "Manufactured by", "Marketed by".
+Find and extract the exact statutory values from the package labels:
+1. mrp: The exact Maximum Retail Price printed on any package surface (e.g. "₹120.00", "Rs. 150.00", "₹149 (incl. of all taxes)"). Look across all panels, including caps, seals, lids, bottom bases, or back labels.
+2. net_quantity: The exact Net Weight / Volume / Count with standard SI unit (e.g. "500 g", "1 kg", "200 ml", "1 L", "10 Units", "5 N"). Look on the Principal Display Panel (PDP) or back label.
+3. packing_date: The exact Month & Year of packing / manufacture / import (e.g. "08/2026", "AUG 2026", "MFD: 07/2026", "PKD: 09/2026"). Look across ink-jet or stamped text on cap, neck, or label.
+4. manufacturer: The exact corporate name and complete postal address of the manufacturer / packer / marketer printed on any label. Look for "Mfd by", "Packed by", "Manufactured by", "Marketed by".
 5. consumer_care: The customer care phone number, toll-free number, or email address printed on the package. Look for "Customer Care", "Consumer Care", "Helpline", "Toll Free", "Email".
 
 Rules:
-- Transcribe the REAL printed text from the image. If a declaration is visible on the package, set status to "VALIDATED" and include the exact extracted text in "value" and "original_text".
-- If a declaration is missing or completely unreadable, set "value" to "" and status to "MISSING" or "POTENTIAL_VIOLATION".
-- In "product_name", extract the real brand and commodity name printed on the package.
+- Combine all declarations found across ALL provided photos into one unified compliance report.
+- If a declaration appears in ANY photo, extract it with status "VALIDATED" and include the exact extracted text in "value" and "original_text".
+- If a declaration is missing across all photos, set "value" to "" and status to "MISSING" or "POTENTIAL_VIOLATION".
+- In "product_name", extract the real brand and commodity name printed on the packaging.
 - DO NOT return placeholder text or dots. Output the real values.
 
 Return JSON ONLY matching this schema:
@@ -239,7 +257,7 @@ Return JSON ONLY matching this schema:
   for (const model of models) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`, {
         method: 'POST',
@@ -249,7 +267,7 @@ Return JSON ONLY matching this schema:
           contents: [{
             parts: [
               { text: prompt },
-              { inline_data: { mime_type: mimeType, data: cleanBase64 } }
+              ...imageParts
             ]
           }],
           generationConfig: { response_mime_type: "application/json", temperature: 0.1 }
@@ -272,6 +290,7 @@ Return JSON ONLY matching this schema:
 
   throw lastError || new Error("Gemini Vision API execution failed");
 }
+
 
 
 
@@ -337,8 +356,10 @@ export default function App() {
   // --- Camera / Scan ---
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [scannedImages, setScannedImages] = useState<Array<{ id: string; url: string; panel: string }>>([]);
   const [activeSide, setActiveSide] = useState<string>('front');
   const [commodityName, setCommodityName] = useState<string>('');
+
   const [commodityCategory, setCommodityCategory] = useState<string>('Food Grains & Pulses');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processingStep, setProcessingStep] = useState<string>('');
@@ -668,16 +689,49 @@ export default function App() {
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(video, 0, 0, width, height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const newImg = {
+          id: String(Date.now()) + Math.random().toString(36).substring(2, 6),
+          url: dataUrl,
+          panel: activeSide
+        };
+        setScannedImages(prev => [...prev, newImg]);
         setCapturedImage(dataUrl);
         stopCamera();
       }
     }
   };
 
+  const handleAddScannedImage = (url: string, panel: string = activeSide) => {
+    const newImg = {
+      id: String(Date.now()) + Math.random().toString(36).substring(2, 6),
+      url,
+      panel
+    };
+    setScannedImages(prev => [...prev, newImg]);
+    setCapturedImage(url);
+  };
+
+  const handleRemoveScannedImage = (id: string) => {
+    setScannedImages(prev => {
+      const filtered = prev.filter(img => img.id !== id);
+      setCapturedImage(filtered[filtered.length - 1]?.url || null);
+      return filtered;
+    });
+  };
+
+  const handleClearAllScannedImages = () => {
+    setScannedImages([]);
+    setCapturedImage(null);
+  };
+
   const processImage = async () => {
-    if (!capturedImage) return;
+    const imagesToAnalyze = scannedImages.length > 0 
+      ? scannedImages.map(img => img.url) 
+      : (capturedImage ? [capturedImage] : []);
+
+    if (imagesToAnalyze.length === 0) return;
     setIsProcessing(true);
-    setProcessingStep("Executing AI Vision Inspection...");
+    setProcessingStep(`Executing AI Vision on ${imagesToAnalyze.length} package photo(s)...`);
 
     const chosenName = commodityName.trim() || "Scanned Packaged Commodity";
     const chosenCat = commodityCategory || "General FMCG";
@@ -690,11 +744,11 @@ export default function App() {
       let extractedManufacturer = "Detected Manufacturer";
       let finalProductName = chosenName;
 
-      // 1. If Gemini Vision API Key is present, run Direct Multimodal Vision AI!
+      // 1. If Gemini Vision API Key is present, run Direct Multimodal Vision AI across all photos!
       if (geminiApiKey && geminiApiKey.trim().length > 5) {
-        setProcessingStep("Executing Gemini 3.5 Flash Multimodal Vision AI...");
+        setProcessingStep(`Executing Gemini 3.5 Flash Vision AI on ${imagesToAnalyze.length} photo(s)...`);
         try {
-          const geminiResult = await runGeminiVisionAnalysis(geminiApiKey, capturedImage, chosenName, chosenCat);
+          const geminiResult = await runGeminiVisionAnalysis(geminiApiKey, imagesToAnalyze, chosenName, chosenCat);
           if (geminiResult) {
             decls = geminiResult.declarations || [];
             rulesResults = geminiResult.compliance_results || [];
@@ -714,7 +768,7 @@ export default function App() {
       if (decls.length === 0) {
         setProcessingStep("Running Deep Learning OCR Pipeline...");
         try {
-          const res = await fetch(capturedImage);
+          const res = await fetch(imagesToAnalyze[0]);
           const blob = await res.blob();
           const file = new File([blob], 'scan.jpg', { type: 'image/jpeg' });
 
@@ -799,15 +853,19 @@ export default function App() {
         officer: user?.name || user?.username || "Officer Shrey",
         declarations: decls,
         compliance_results: rulesResults,
-        notes: `Live scan for ${finalProductName} executed and verified.`,
-        image_url: capturedImage
+        notes: `Live multi-panel scan (${imagesToAnalyze.length} photos) for ${finalProductName} executed and verified.`,
+        image_url: imagesToAnalyze[0],
+        images: scannedImages.length > 0 ? scannedImages : [{ id: '1', url: capturedImage!, panel: activeSide }]
       };
       
       setInspections(prev => [newRecord, ...prev]);
 
       setSelectedInspectionId(newId);
       setCommodityName('');
+      setScannedImages([]);
+      setCapturedImage(null);
       setCurrentPage('inspection');
+
 
     } catch (err: any) {
       console.warn("Activating intelligent offline inspection mode with captured photo:", err);
@@ -940,6 +998,10 @@ export default function App() {
           canvasRef={canvasRef}
           cameraActive={cameraActive}
           capturedImage={capturedImage}
+          scannedImages={scannedImages}
+          onAddImage={handleAddScannedImage}
+          onRemoveImage={handleRemoveScannedImage}
+          onClearImages={handleClearAllScannedImages}
           activeSide={activeSide}
           setActiveSide={setActiveSide}
           isProcessing={isProcessing}
@@ -956,6 +1018,7 @@ export default function App() {
           setCommodityCategory={setCommodityCategory}
           language={language}
         />
+
       </div>
     );
   }

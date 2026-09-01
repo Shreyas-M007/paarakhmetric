@@ -40,7 +40,15 @@ export default function InspectionDetailScreen({
 
   const t = translations[language] || translations.en;
 
-  const displayImage = (!imageError && (inspection.image_url || capturedImage)) || null;
+  const allImages: Array<{ url: string; panel?: string }> = (inspection.images && inspection.images.length > 0)
+    ? inspection.images
+    : (inspection.image_url || capturedImage ? [{ url: inspection.image_url || capturedImage, panel: inspectingSide }] : []);
+
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const displayImage = (!imageError && allImages[activeImageIndex]?.url) || (!imageError && (inspection.image_url || capturedImage)) || null;
+
+
 
   // Ensure default statutory rules if empty
   const complianceResults = (inspection.compliance_results && inspection.compliance_results.length > 0)
@@ -276,8 +284,33 @@ export default function InspectionDetailScreen({
               )}
             </div>
 
+            {/* Multi-Photo Thumbnail Bar if multiple photos exist */}
+            {allImages.length > 1 && (
+              <div className="px-4 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                {allImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setActiveImageIndex(idx);
+                      setImageError(false);
+                    }}
+                    className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all cursor-pointer ${
+                      activeImageIndex === idx ? 'border-accent shadow-md scale-105' : 'border-divider opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={img.url} alt={`Panel ${idx + 1}`} className="w-full h-full object-cover" />
+                    <span className="absolute bottom-0 inset-x-0 bg-black/80 text-[8px] font-bold text-white text-center py-0.5 truncate px-0.5">
+                      {img.panel?.replace('_', ' ').toUpperCase() || `P${idx + 1}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Attach or Replace Photo Button */}
             <div className="px-4 pb-4">
+
               <label className="w-full bg-surface-elevated hover:bg-surface border border-divider text-fg font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 text-xs cursor-pointer active:scale-95 transition-transform">
                 <Upload className="w-3.5 h-3.5 text-accent" />
                 <span>{displayImage ? (language === 'hi' ? 'फोटो बदलें' : language === 'kn' ? 'ಫೋಟೋ ಬದಲಾಯಿಸಿ' : 'Replace / Re-upload Photo') : (language === 'hi' ? 'फोटो संलग्न करें' : language === 'kn' ? 'ಫೋಟೋ ಲಗತ್ತಿಸಿ' : 'Attach Package Photo')}</span>
