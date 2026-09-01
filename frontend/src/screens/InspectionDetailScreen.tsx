@@ -50,16 +50,21 @@ export default function InspectionDetailScreen({
 
 
 
-  // Ensure default statutory rules if empty
-  const complianceResults = (inspection.compliance_results && inspection.compliance_results.length > 0)
-    ? inspection.compliance_results
-    : [
-        { rule_id: "PC-MRP-001", field: "mrp", status: "PASS", details: "Maximum Retail Price (MRP) declared inclusive of all taxes" },
-        { rule_id: "PC-QTY-002", field: "net_quantity", status: "PASS", details: "Standard SI unit of weight / volume verified" },
-        { rule_id: "PC-DATE-003", field: "packing_date", status: "PASS", details: "Month and Year of manufacture/packing detected" },
-        { rule_id: "PC-MFG-004", field: "manufacturer", status: "PASS", details: "Complete manufacturer identifier & address present" },
-        { rule_id: "PC-CARE-005", field: "consumer_care", status: "PASS", details: "Consumer grievance redressal helpline / email active" }
-      ];
+  // Interactive Rules and Declarations state
+  const [rulesList, setRulesList] = useState<any[]>(() => {
+    return (inspection.compliance_results && inspection.compliance_results.length > 0)
+      ? [...inspection.compliance_results]
+      : [
+          { rule_id: "PC-MRP-001", field: "mrp", status: "PASS", details: "Maximum Retail Price (MRP) declared inclusive of all taxes" },
+          { rule_id: "PC-QTY-002", field: "net_quantity", status: "PASS", details: "Standard SI unit of weight / volume verified" },
+          { rule_id: "PC-DATE-003", field: "packing_date", status: "PASS", details: "Month and Year of manufacture/packing detected" },
+          { rule_id: "PC-MFG-004", field: "manufacturer", status: "PASS", details: "Complete manufacturer identifier & address present" },
+          { rule_id: "PC-CARE-005", field: "consumer_care", status: "PASS", details: "Consumer grievance redressal helpline / email active" }
+        ];
+  });
+
+  const [currentOverallStatus, setCurrentOverallStatus] = useState(inspection.status || "COMPLIANT");
+  const [savedSuccessMsg, setSavedSuccessMsg] = useState("");
 
   const declarations = (inspection.declarations && inspection.declarations.length > 0)
     ? inspection.declarations
@@ -71,12 +76,26 @@ export default function InspectionDetailScreen({
         { field_name: "consumer_care", value: "care@nationalconsumer.in", status: "VALIDATED", confidence: 0.91 }
       ];
 
-  const { failed, total } = computeRuleTally(complianceResults);
-  const statusLabel = getStatusTranslation(inspection.status, language);
-  const statusColor = inspection.status === 'COMPLIANT' ? 'text-success' :
-    inspection.status === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning';
+  const { failed, total } = computeRuleTally(rulesList);
+  const statusLabel = getStatusTranslation(currentOverallStatus, language);
+  const statusColor = currentOverallStatus === 'COMPLIANT' ? 'text-success' :
+    currentOverallStatus === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning';
 
   const currentIndex = inspections.findIndex(i => i.id === inspection.id);
+
+  const handleRuleVerdictChange = (ruleId: string, newStatus: string) => {
+    setRulesList(prev => {
+      const updated = prev.map(r => r.rule_id === ruleId ? { ...r, status: newStatus } : r);
+      inspection.compliance_results = updated;
+      const failedCount = updated.filter(r => r.status === 'FAIL' || r.status === 'NON_COMPLIANT').length;
+      const newOverall = failedCount === 0 ? 'COMPLIANT' : 'NON_COMPLIANT';
+      setCurrentOverallStatus(newOverall);
+      inspection.status = newOverall;
+      return updated;
+    });
+    setSavedSuccessMsg(`Rule ${ruleId} updated to ${newStatus}`);
+    setTimeout(() => setSavedSuccessMsg(''), 2500);
+  };
 
   const handleSaveEdit = (fieldName: string) => {
     onManualOverride(fieldName, editValue);
@@ -90,6 +109,7 @@ export default function InspectionDetailScreen({
     }
     setIsEditingProduct(false);
   };
+
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -342,6 +362,15 @@ export default function InspectionDetailScreen({
 
         {/* Right Column: Rule Tally, Declarations & Rule Verdicts (lg:col-span-7) */}
         <div className="lg:col-span-7 flex flex-col gap-5">
+          
+          {/* Saved feedback toast */}
+          {savedSuccessMsg && (
+            <div className="bg-success/15 border border-success/30 text-success text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm animate-fadeIn">
+              <CheckCircle className="w-4 h-4 text-success" />
+              <span>{savedSuccessMsg}</span>
+            </div>
+          )}
+
           {/* Rule tally hero */}
           <section className="bg-surface rounded-2xl p-6 border border-divider/60 shadow-sm">
             <div className="flex items-center justify-between">
@@ -357,7 +386,7 @@ export default function InspectionDetailScreen({
             </div>
             {failed > 0 ? (
               <p className="text-[13px] text-error font-medium mt-1">
-                {complianceResults.filter((r: any) => r.status === 'FAIL' || r.status === 'NON_COMPLIANT')
+                {rulesList.filter((r: any) => r.status === 'FAIL' || r.status === 'NON_COMPLIANT')
                   .map((r: any) => r.details).join(' · ')}
               </p>
             ) : (
@@ -367,6 +396,41 @@ export default function InspectionDetailScreen({
                  'All statutory Legal Metrology declarations verified and compliant.'}
               </p>
             )}
+
+            {/* Quick Officer Decision Toggles */}
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-divider/40 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  const allPassed = rulesList.map(r => ({ ...r, status: 'PASS' }));
+                  setRulesList(allPassed);
+                  inspection.compliance_results = allPassed;
+                  inspection.status = 'COMPLIANT';
+                  setCurrentOverallStatus('COMPLIANT');
+                  setSavedSuccessMsg('All Statutory Rules marked as COMPLIANT & PASS');
+                  setTimeout(() => setSavedSuccessMsg(''), 2500);
+                }}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-success/15 hover:bg-success/25 text-success border border-success/30 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
+              >
+                <CheckCircle className="w-3.5 h-3.5" /> Pass All 17 Rules
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const marked = rulesList.map(r => r.status === 'PASS' ? r : ({ ...r, status: 'FAIL' }));
+                  setRulesList(marked);
+                  inspection.compliance_results = marked;
+                  inspection.status = 'NON_COMPLIANT';
+                  setCurrentOverallStatus('NON_COMPLIANT');
+                  setSavedSuccessMsg('Flagged unresolved items as Violations');
+                  setTimeout(() => setSavedSuccessMsg(''), 2500);
+                }}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-error/15 hover:bg-error/25 text-error border border-error/30 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
+              >
+                <AlertCircle className="w-3.5 h-3.5" /> Flag Violations
+              </button>
+            </div>
           </section>
 
           {/* Declarations table */}
@@ -384,7 +448,7 @@ export default function InspectionDetailScreen({
               {declarations.map((decl: any) => {
                 const isEditing = editingField === decl.field_name;
                 return (
-                  <div key={decl.field_name || decl.id} className="bg-surface rounded-2xl p-4 flex items-center gap-3 border border-divider/60">
+                  <div key={decl.field_name || decl.id} className="bg-surface rounded-2xl p-4 flex items-center gap-3 border border-divider/60 shadow-sm">
                     <div className="flex-1 min-w-0">
                       <span className="text-[14px] font-semibold text-fg capitalize block truncate">
                         {getDeclarationFieldTranslation(decl.field_name, language)}
@@ -402,11 +466,15 @@ export default function InspectionDetailScreen({
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {decl.confidence && (
-                        <span className="text-[10px] text-fg-muted font-mono">{Math.round(decl.confidence * 100)}%</span>
+                        <span className="text-[10px] text-fg-muted font-mono bg-surface-elevated px-1.5 py-0.5 rounded border border-divider/40">
+                          {Math.round(decl.confidence * 100)}%
+                        </span>
                       )}
                       {!isEditing && (
                         <button onClick={() => { setEditingField(decl.field_name); setEditValue(decl.value || ''); }}
-                          className="text-fg-muted hover:text-fg p-1 cursor-pointer" title="Manual Override"><Edit3 className="w-3.5 h-3.5" /></button>
+                          className="text-fg-muted hover:text-fg p-1.5 rounded-lg hover:bg-surface-elevated cursor-pointer transition-colors" title="Manual Override / Edit Text">
+                          <Edit3 className="w-3.5 h-3.5 text-accent" />
+                        </button>
                       )}
                       {decl.status === 'VALIDATED' || decl.status === 'OFFICER_CONFIRMED' ? (
                         <CheckCircle className="w-4 h-4 text-success" />
@@ -422,26 +490,73 @@ export default function InspectionDetailScreen({
             </div>
           </section>
 
-          {/* Compliance rule results */}
+          {/* Compliance rule results with Interactive Officer Verdict Toggles */}
           <section className="flex flex-col gap-3">
-            <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">
-              {t.ruleVerdicts}
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">
+                {t.ruleVerdicts}
+              </span>
+              <span className="text-[10px] text-fg-muted">
+                Click Pass / Fail / Review on any rule to modify verdict
+              </span>
+            </div>
+
             <div className="flex flex-col gap-2">
-              {complianceResults.map((rule: any, idx: number) => {
-                const ruleStatusColor = rule.status === 'PASS' ? 'text-success' : rule.status === 'FAIL' ? 'text-error font-bold' : 'text-warning';
-                const ruleStatusLabel = getStatusTranslation(rule.status, language);
+              {rulesList.map((rule: any, idx: number) => {
+                const isPass = rule.status === 'PASS';
+                const isFail = rule.status === 'FAIL' || rule.status === 'NON_COMPLIANT';
+                const isReview = !isPass && !isFail;
+
                 return (
-                  <div key={rule.rule_id || idx} className="bg-surface rounded-2xl p-4 flex items-center gap-3 border border-divider/60">
+                  <div key={rule.rule_id || idx} className="bg-surface rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-divider/60 shadow-sm transition-all">
                     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                       <span className="text-[14px] font-semibold text-fg truncate">
                         {rule.rule_id} · {getDeclarationFieldTranslation(rule.field || '', language)}
                       </span>
                       <span className="text-[13px] text-fg-muted">{rule.details}</span>
                     </div>
-                    <span className={`flex-shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${ruleStatusColor}`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current" />{ruleStatusLabel}
-                    </span>
+
+                    {/* Interactive Verdict Action Buttons */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0 self-start sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRuleVerdictChange(rule.rule_id, 'PASS')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                          isPass
+                            ? 'bg-success text-on-accent border border-success shadow-sm'
+                            : 'bg-surface-elevated text-fg-muted hover:text-fg hover:bg-surface border border-divider/60 opacity-80'
+                        }`}
+                        title="Mark as Compliant (Pass)"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Pass
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRuleVerdictChange(rule.rule_id, 'FAIL')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                          isFail
+                            ? 'bg-error text-white border border-error shadow-sm font-bold'
+                            : 'bg-surface-elevated text-fg-muted hover:text-fg hover:bg-surface border border-divider/60 opacity-80'
+                        }`}
+                        title="Mark as Violation (Fail)"
+                      >
+                        <X className="w-3.5 h-3.5" /> Fail
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRuleVerdictChange(rule.rule_id, 'REQUIRES_REVIEW')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                          isReview
+                            ? 'bg-warning text-black border border-warning shadow-sm font-bold'
+                            : 'bg-surface-elevated text-fg-muted hover:text-fg hover:bg-surface border border-divider/60 opacity-80'
+                        }`}
+                        title="Mark for Officer Review"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5" /> Review
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -449,6 +564,7 @@ export default function InspectionDetailScreen({
           </section>
         </div>
       </div>
+
 
       {/* Fullscreen High-Resolution Zoom Lightbox Modal */}
       {showZoomModal && displayImage && (
