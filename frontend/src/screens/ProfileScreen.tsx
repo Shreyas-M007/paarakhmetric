@@ -141,7 +141,7 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
         columns={2}
         items={[
           { id: 'region', label: 'Assigned region', value: region },
-          { id: 'version', label: 'App version', value: 'v2.4.1' }
+          { id: 'version', label: 'App version', value: 'v1.0.0' }
         ]} 
       />
 
@@ -197,7 +197,7 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
             </span>
           </button>
         </div>
-        <p className="text-center text-[12px] text-fg-muted pt-2 tracking-[0.02em]">PaarakhMetric v2.4.1 · Build 8842</p>
+        <p className="text-center text-[12px] text-fg-muted pt-2 tracking-[0.02em]">PaarakhMetric v1.0.0 · Build 1001</p>
       </section>
 
       {/* Edit Profile Modal */}
