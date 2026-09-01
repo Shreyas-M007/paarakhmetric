@@ -48,7 +48,8 @@ const CATEGORIES = [
 export default function ScanScreen({
   videoRef, canvasRef, cameraActive, capturedImage, scannedImages = [],
   onAddImage, onRemoveImage, onClearImages, activeSide, setActiveSide,
-  isProcessing, processingStep, startCamera: _startCamera, stopCamera, capturePhoto,
+  isProcessing, processingStep, startCamera, stopCamera, capturePhoto,
+
 
   processImage, setCapturedImage, onBack, commodityName, setCommodityName,
   commodityCategory, setCommodityCategory, language = 'en'
@@ -299,26 +300,39 @@ export default function ScanScreen({
               />
 
               {!cameraActive ? (
-                <>
+                <div className="w-full flex gap-2 flex-wrap sm:flex-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => startCamera()}
+                    className="flex-1 bg-accent text-on-accent font-bold py-3.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs active:scale-95 transition-transform shadow-md shadow-accent/20 cursor-pointer whitespace-nowrap"
+                    title="Open Live Camera Stream on Laptop or Phone"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>📹 Live Camera</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
-                    className="flex-1 bg-accent text-on-accent font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform shadow-md shadow-accent/20 cursor-pointer"
+                    className="flex-1 bg-surface-elevated hover:bg-surface text-fg border border-divider font-bold py-3.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
+                    title="Take photo using phone camera app"
                   >
-                    <Camera className="w-4 h-4" />
-                    <span>{hasPhotos ? "+ Snap Another Side" : "📸 Snap Photo (Camera)"}</span>
+                    <Camera className="w-4 h-4 text-accent" />
+                    <span>📸 Snap Photo</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="bg-surface hover:bg-surface-elevated text-fg border border-divider font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform cursor-pointer"
+                    className="flex-1 bg-surface-elevated hover:bg-surface text-fg border border-divider font-bold py-3.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs active:scale-95 transition-transform cursor-pointer whitespace-nowrap"
+                    title="Upload existing photos from gallery or files"
                   >
                     <Upload className="w-4 h-4 text-accent" />
                     <span>📁 Gallery / Files</span>
                   </button>
-                </>
+                </div>
               ) : (
+
                 <>
                   <button
                     type="button"

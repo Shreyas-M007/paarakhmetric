@@ -656,16 +656,15 @@ export default function App() {
     setCameraActive(true);
     setCapturedImage(null);
     try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
-      };
       let stream: MediaStream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
       } catch {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
@@ -678,7 +677,7 @@ export default function App() {
       }
     } catch (err) {
       console.error("Camera access error:", err);
-      alert("Could not access camera. Please allow camera permissions in your browser or upload an image file.");
+      alert("Could not access camera. Please allow camera permissions in your browser or use the Snap Photo / Gallery buttons.");
       setCameraActive(false);
     }
   };
@@ -695,8 +694,8 @@ export default function App() {
   const capturePhoto = () => {
     if (videoRef.current) {
       const video = videoRef.current;
-      const width = video.videoWidth || video.clientWidth || 1920;
-      const height = video.videoHeight || video.clientHeight || 1080;
+      const width = video.videoWidth > 0 ? video.videoWidth : (video.clientWidth || 1280);
+      const height = video.videoHeight > 0 ? video.videoHeight : (video.clientHeight || 720);
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -706,7 +705,7 @@ export default function App() {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(video, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
         const newImg = {
           id: String(Date.now()) + Math.random().toString(36).substring(2, 6),
           url: dataUrl,
@@ -718,6 +717,7 @@ export default function App() {
       }
     }
   };
+
 
   const handleAddScannedImage = (url: string, panel: string = activeSide) => {
     const newImg = {
