@@ -88,6 +88,10 @@ def parse_with_llm(ocr_text: str, avg_ocr_confidence: float) -> Dict[str, Any]:
         results["unsupported_language_detected"] = parsed.get("unsupported_language_detected", False)
         return results
         
+    except Exception as e:
+        print(f"LLM Parsing Error: {e}")
+        return {}
+
 from PIL import Image
 
 def parse_with_vision_llm(image_path: str, fallback_ocr_text: str = "") -> Dict[str, Any]:
