@@ -31,6 +31,8 @@ interface ScanScreenProps {
   setCommodityName: (name: string) => void;
   commodityCategory: string;
   setCommodityCategory: (cat: string) => void;
+  geminiApiKey?: string;
+  onSaveGeminiKey?: (key: string) => void;
   language?: Language;
 }
 
@@ -48,12 +50,15 @@ export default function ScanScreen({
   onAddImage, onRemoveImage, onClearImages, activeSide, setActiveSide,
   isProcessing, processingStep, startCamera, stopCamera, capturePhoto,
   processImage, setCapturedImage, onBack, commodityName, setCommodityName,
-  commodityCategory, setCommodityCategory, language = 'en'
+  commodityCategory, setCommodityCategory, geminiApiKey = '', onSaveGeminiKey, language = 'en'
 }: ScanScreenProps) {
   const t = translations[language] || translations.en;
   const [isDragging, setIsDragging] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [tempKey, setTempKey] = useState(geminiApiKey);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
 
   const panels = [
     { name: 'front', label: t.frontPanelPdp || 'Front (PDP)' },
@@ -128,11 +133,75 @@ export default function ScanScreen({
             Attach multiple photos for complete verification (e.g. Front PDP, Back Label, MRP/MFD Cap)
           </span>
         </div>
-        <button onClick={onBack}
-          className="text-xs font-bold text-accent hover:underline px-3.5 py-2 rounded-xl bg-surface border border-divider cursor-pointer">
-          {t.cancel || "Cancel"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowKeyModal(true)}
+            className="text-xs font-bold text-fg-muted hover:text-fg px-3 py-2 rounded-xl bg-surface border border-divider flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Configure Private Gemini Vision API Key"
+          >
+            <span>⚙️ AI Key</span>
+            <span className={`w-2 h-2 rounded-full ${geminiApiKey ? 'bg-success' : 'bg-warning animate-pulse'}`} />
+          </button>
+
+          <button onClick={onBack}
+            className="text-xs font-bold text-accent hover:underline px-3.5 py-2 rounded-xl bg-surface border border-divider cursor-pointer">
+            {t.cancel || "Cancel"}
+          </button>
+        </div>
       </section>
+
+      {/* Gemini API Key Modal */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-[300] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-bold text-fg">Private Gemini Vision API Key</h3>
+              <button onClick={() => setShowKeyModal(false)} className="text-fg-muted hover:text-fg font-bold">✕</button>
+            </div>
+            <p className="text-xs text-fg-muted leading-relaxed">
+              To read photos with Google Gemini Multimodal Vision AI, paste your fresh API key from Google AI Studio. It is saved <strong>strictly in your own browser</strong> and is never exposed or shared.
+            </p>
+            <input
+              type="password"
+              value={tempKey}
+              onChange={(e) => setTempKey(e.target.value)}
+              placeholder="Paste AIzaSy... API key"
+              className="w-full bg-surface-elevated border border-divider rounded-xl px-3.5 py-2.5 text-xs text-fg font-mono outline-none focus:border-accent"
+            />
+            <div className="flex items-center justify-between pt-2">
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-accent hover:underline font-bold"
+              >
+                Get Free Key (Google AI Studio) ↗
+              </a>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowKeyModal(false)}
+                  className="px-3 py-1.5 text-xs text-fg-muted bg-surface-elevated rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSaveGeminiKey) onSaveGeminiKey(tempKey.trim());
+                    setShowKeyModal(false);
+                  }}
+                  className="px-4 py-1.5 text-xs font-bold text-on-accent bg-accent rounded-xl cursor-pointer shadow"
+                >
+                  Save Key
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Responsive Desktop Multi-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

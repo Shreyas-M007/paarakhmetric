@@ -282,14 +282,19 @@ Return JSON ONLY matching this schema:
         if (rawText) {
           return JSON.parse(rawText);
         }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        const msg = errorData.error?.message || `API error ${res.status}`;
+        lastError = new Error(msg);
       }
-    } catch (err) {
+    } catch (err: any) {
       lastError = err;
     }
   }
 
   throw lastError || new Error("Gemini Vision API execution failed");
 }
+
 
 
 
@@ -367,15 +372,15 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null!);
 
   // --- Gemini Vision API Key ---
-  const [geminiApiKey] = useState<string>(() => {
-    const saved = localStorage.getItem('paarakhmetric_gemini_api_key');
-    if (saved) return saved;
-    try {
-      return atob('QUl6YVN5RG5uZWdScmp3TDN5aWRWSmdIbVE0OFJfSXlFcUVGOUdz');
-    } catch {
-      return '';
-    }
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
+    return localStorage.getItem('paarakhmetric_gemini_api_key') || '';
   });
+
+  const handleSaveGeminiKey = (key: string) => {
+    setGeminiApiKey(key.trim());
+    localStorage.setItem('paarakhmetric_gemini_api_key', key.trim());
+  };
+
 
 
 
@@ -758,10 +763,14 @@ export default function App() {
               finalProductName = geminiResult.product_name;
             }
           }
-        } catch (geminiErr) {
-          console.warn("Gemini Vision direct call failed, falling back to instant local engine:", geminiErr);
+        } catch (geminiErr: any) {
+          console.warn("Gemini Vision direct call failed:", geminiErr);
+          if (geminiErr?.message && (geminiErr.message.includes('leaked') || geminiErr.message.includes('key') || geminiErr.message.includes('403'))) {
+            alert(`⚠️ Google Gemini Vision Notice:\n${geminiErr.message}\n\nPlease click "AI Vision Key" to connect your fresh free API key from Google AI Studio.`);
+          }
         }
       }
+
 
 
       // 2. If declarations not yet populated, run backend pipeline or intelligent offline fallback
@@ -1016,8 +1025,11 @@ export default function App() {
           setCommodityName={setCommodityName}
           commodityCategory={commodityCategory}
           setCommodityCategory={setCommodityCategory}
+          geminiApiKey={geminiApiKey}
+          onSaveGeminiKey={handleSaveGeminiKey}
           language={language}
         />
+
 
       </div>
     );
