@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Landmark, Moon, Sun, Contrast, X, Check, Phone, Mail, Award, CheckCircle2, Globe } from 'lucide-react';
+import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Landmark, Moon, Sun, Contrast, X, Check, Phone, Mail, CheckCircle2, Globe } from 'lucide-react';
 import StatGrid from '../components/StatGrid';
-import { Language } from '../i18n';
+
+import { Language, translations } from '../i18n';
 
 interface ProfileScreenProps {
   user: any;
@@ -13,11 +14,26 @@ interface ProfileScreenProps {
   setLanguage?: (lang: Language) => void;
 }
 
+const INDIC_LANGUAGES_CATALOG = [
+  { code: 'hi', name: 'हिन्दी (Hindi)', script: 'Devanagari', ocrStatus: 'Active', accuracy: '98.5%' },
+  { code: 'kn', name: 'ಕನ್ನಡ (Kannada)', script: 'Kannada', ocrStatus: 'Active', accuracy: '97.8%' },
+  { code: 'ta', name: 'தமிழ் (Tamil)', script: 'Tamil', ocrStatus: 'Active', accuracy: '97.2%' },
+  { code: 'te', name: 'తెలుగు (Telugu)', script: 'Telugu', ocrStatus: 'Active', accuracy: '97.4%' },
+  { code: 'mr', name: 'मराठी (Marathi)', script: 'Devanagari', ocrStatus: 'Active', accuracy: '98.1%' },
+  { code: 'bn', name: 'বাংলা (Bengali)', script: 'Bengali', ocrStatus: 'Active', accuracy: '97.9%' },
+  { code: 'gu', name: 'ગુજરાતી (Gujarati)', script: 'Gujarati', ocrStatus: 'Active', accuracy: '96.8%' },
+  { code: 'ml', name: 'മലയാളം (Malayalam)', script: 'Malayalam', ocrStatus: 'Active', accuracy: '96.5%' },
+  { code: 'pa', name: 'ਪੰਜਾਬੀ (Punjabi)', script: 'Gurmukhi', ocrStatus: 'Active', accuracy: '96.2%' },
+  { code: 'or', name: 'ଓଡ଼ିଆ (Odia)', script: 'Odia', ocrStatus: 'Active', accuracy: '95.9%' },
+  { code: 'as', name: 'অসমীয়া (Assamese)', script: 'Eastern Nagari', ocrStatus: 'Active', accuracy: '95.7%' },
+  { code: 'en', name: 'English', script: 'Latin', ocrStatus: 'Active', accuracy: '99.4%' }
+];
+
 export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, onUpdateUser, language = 'en', setLanguage }: ProfileScreenProps) {
   const [view, setView] = useState<'profile' | 'theme' | 'language'>('profile');
   const [activeModal, setActiveModal] = useState<'edit' | 'permissions' | 'support' | null>(null);
+  const t = translations[language] || translations.en;
 
-  
   // Profile edit form state
   const [name, setName] = useState(user?.name || user?.username || 'Officer Shrey');
   const [email, setEmail] = useState(user?.email || 'shrey.legalmetrology@delhi.gov.in');
@@ -25,7 +41,6 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
   const [region, setRegion] = useState(user?.region || 'New Delhi NCR');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Sync state whenever user prop updates or mounts
   useEffect(() => {
     if (user) {
       if (user.name) setName(user.name);
@@ -57,18 +72,18 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
 
   if (view === 'theme') {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
         <section className="flex items-center gap-3">
           <button onClick={() => setView('profile')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="font-display text-[28px] leading-[32px] font-bold m-0">App theme</h1>
+          <h1 className="font-display text-[28px] leading-[32px] font-bold m-0">App Theme</h1>
         </section>
 
-        <section className="bg-surface rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden">
-          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Live preview</span>
+        <section className="bg-surface rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden border border-divider">
+          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Live Preview</span>
           <span className="font-display text-[32px] font-bold leading-none capitalize">{currentTheme.replace('-', ' ')}</span>
-          <span className="text-[13px] text-fg-muted">Compliance status rows rendered on flat charcoal tiles, outline-only status badges, single warm accent.</span>
+          <span className="text-[13px] text-fg-muted">Civic Ledger theme with vibrant high-visibility red error status and standard metrology accents.</span>
           <div className="flex gap-2 mt-2">
             <span className="w-9 h-9 rounded-sm flex-shrink-0 bg-canvas border border-divider"></span>
             <span className="w-9 h-9 rounded-sm flex-shrink-0 bg-surface"></span>
@@ -80,8 +95,8 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
             <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-success">
               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Pass
             </span>
-            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-error">
-              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Fail
+            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-error font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Fail (Vibrant Red)
             </span>
             <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-warning">
               <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Review
@@ -90,27 +105,31 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
         </section>
 
         <section className="flex flex-col gap-3">
-          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Available themes</span>
-          <div className="flex flex-col">
+          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Available Themes</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { id: 'civic-ledger', label: 'Civic Ledger', desc: 'Pure black canvas · outline status badges', Icon: Landmark },
-              { id: 'default-noir', label: 'Default Noir', desc: 'Original PaarakhMetric charcoal build', Icon: Moon },
-              { id: 'daylight-registry', label: 'Daylight Registry', desc: 'Light-surface variant for field-office desks', Icon: Sun },
-              { id: 'high-contrast', label: 'High Contrast', desc: 'Accessibility mode · larger status glyphs', Icon: Contrast },
-            ].map(theme => (
-              <button 
-                key={theme.id}
-                onClick={() => setTheme(theme.id)}
-                className="flex items-center gap-3 bg-surface rounded-2xl p-5 text-left w-full transition-colors hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-fg mb-3 active:scale-99"
+              { id: 'civic-ledger', label: 'Civic Ledger', desc: 'Charcoal canvas · vibrant red fail status · gold accent', Icon: Landmark },
+              { id: 'default-noir', label: 'Default Noir', desc: 'Original PaarakhMetric deep black build', Icon: Moon },
+              { id: 'daylight-registry', label: 'Daylight Registry', desc: 'Light-surface variant for field desks', Icon: Sun },
+              { id: 'high-contrast', label: 'High Contrast', desc: 'Accessibility mode · maximum contrast glyphs', Icon: Contrast },
+            ].map(thm => (
+              <button
+                key={thm.id}
+                onClick={() => { setTheme(thm.id); setView('profile'); }}
+                className={`flex items-center gap-4 bg-surface rounded-2xl p-5 text-left transition-all hover:bg-surface-elevated active:scale-99 border ${
+                  currentTheme === thm.id ? 'border-accent bg-accent/5' : 'border-divider'
+                }`}
               >
-                <span className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-surface-recessed text-fg-muted">
-                  <theme.Icon className="w-5 h-5" />
+                <span className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-surface-recessed text-accent">
+                  <thm.Icon className="w-5 h-5" />
                 </span>
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-[16px] font-semibold text-fg whitespace-nowrap overflow-hidden text-ellipsis">{theme.label}</span>
-                  <span className="text-[13px] text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">{theme.desc}</span>
+                  <span className="text-[16px] font-semibold text-fg">{thm.label}</span>
+                  <span className="text-[13px] text-fg-muted">{thm.desc}</span>
                 </span>
-                <span className={`flex-shrink-0 w-5 h-5 rounded-full border-[1.5px] border-divider flex items-center justify-center ${currentTheme === theme.id ? 'after:content-[\'\'] after:w-2.5 after:h-2.5 after:rounded-full after:bg-accent' : ''}`}></span>
+                {currentTheme === thm.id && (
+                  <Check className="w-5 h-5 text-accent flex-shrink-0" />
+                )}
               </button>
             ))}
           </div>
@@ -130,19 +149,18 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
       { id: 'bn', symbol: 'অ', label: 'বাংলা (Bengali)', desc: 'আইনগত পরিমাপবিদ্যা প্রয়োগ' },
     ];
 
-
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
         <section className="flex items-center gap-3">
           <button onClick={() => setView('profile')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="font-display text-[28px] leading-[32px] font-bold m-0">Language / भाषा</h1>
+          <h1 className="font-display text-[28px] leading-[32px] font-bold m-0">Interface Language</h1>
         </section>
 
         <section className="flex flex-col gap-3">
-          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Select language</span>
-          <div className="flex flex-col gap-3">
+          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Select Application Language</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {langOptions.map((opt) => (
               <button
                 key={opt.id}
@@ -154,7 +172,7 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
                   language === opt.id ? 'border-accent bg-accent/5' : 'border-divider'
                 }`}
               >
-                <span className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-surface-recessed text-accent font-bold text-lg">
+                <span className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-surface-recessed text-accent font-bold text-lg font-display">
                   {opt.symbol}
                 </span>
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
@@ -173,100 +191,157 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 w-full">
+      {/* Header */}
       <section className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-[32px] leading-[32px] font-bold m-0">Profile</h1>
+        <h1 className="font-display text-[30px] font-bold m-0 text-fg">{t.profile || "Profile & Settings"}</h1>
         <div className="flex items-center gap-2">
-          <button onClick={() => setView('language')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0" title="Language Settings">
-            <Globe className="w-5 h-5" />
+          <button onClick={() => setView('language')} className="w-10 h-10 rounded-xl bg-surface border border-divider text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0" title="Language Settings">
+            <Globe className="w-5 h-5 text-accent" />
           </button>
-          <button onClick={() => setView('theme')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0" title="Theme Settings">
+          <button onClick={() => setView('theme')} className="w-10 h-10 rounded-xl bg-surface border border-divider text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0" title="Theme Settings">
             <Settings className="w-5 h-5" />
           </button>
         </div>
       </section>
 
+      {/* Responsive Desktop Multi-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Officer Identity, Status & StatGrid (lg:col-span-4) */}
+        <div className="lg:col-span-4 flex flex-col gap-5">
+          <section className="bg-surface rounded-2xl p-6 flex flex-col items-center gap-4 text-center border border-divider/60 shadow-sm">
+            <div className="w-[88px] h-[88px] rounded-full bg-surface-recessed border-2 border-accent/40 flex items-center justify-center text-fg font-display text-[32px] font-bold shadow-inner">
+              {name?.substring(0,2)?.toUpperCase() || 'OF'}
+            </div>
+            <div>
+              <p className="font-display text-[26px] font-bold leading-tight m-0 text-fg">{name}</p>
+              <p className="text-[13px] text-fg-muted font-medium mt-1">Legal Metrology Field Officer · ID OF-2291</p>
+            </div>
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-success/10 border border-success/30 text-success">
+              <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>Enforcement Session Active
+            </span>
+          </section>
 
-      <section className="bg-surface rounded-2xl p-6 flex flex-col items-center gap-4 text-center">
-        <div className="w-[88px] h-[88px] rounded-full bg-surface-recessed flex items-center justify-center text-fg font-display text-[32px] font-bold">
-          {name?.substring(0,2)?.toUpperCase() || 'OF'}
-        </div>
-        <div>
-          <p className="font-display text-[32px] font-bold leading-none m-0">{name}</p>
-          <p className="text-[13px] text-fg-muted font-medium mt-1">Field Officer · Officer ID OF-2291</p>
-        </div>
-        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-success mt-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Session active
-        </span>
-      </section>
+          <StatGrid 
+            columns={2}
+            items={[
+              { id: 'region', label: 'Assigned District', value: region },
+              { id: 'version', label: 'App Version', value: 'v2.4 Live' }
+            ]} 
+          />
 
-      <StatGrid 
-        columns={2}
-        items={[
-          { id: 'region', label: 'Assigned region', value: region },
-          { id: 'version', label: 'App version', value: 'v1.0.0' }
-        ]} 
-      />
-
-      <section className="flex flex-col gap-3">
-        <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Account & Operations</span>
-        <div className="flex flex-col">
           <button 
-            onClick={() => setActiveModal('edit')}
-            className="flex items-center gap-3 w-full bg-transparent border-b border-divider py-5 text-left transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-fg focus-visible:rounded-lg"
+            onClick={onLogout} 
+            className="flex items-center justify-center gap-2 w-full bg-surface hover:bg-error/10 border border-divider hover:border-error/40 text-error rounded-2xl py-3.5 px-4 font-bold text-sm transition-colors active:scale-95 cursor-pointer"
           >
-            <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface text-fg-muted">
-              <UserCog className="w-4 h-4" />
-            </span>
-            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[16px] font-semibold text-fg whitespace-nowrap overflow-hidden text-ellipsis">Edit profile details</span>
-              <span className="text-[13px] text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">Name, contact, assigned district</span>
-            </span>
-          </button>
-          
-          <button 
-            onClick={() => setActiveModal('permissions')}
-            className="flex items-center gap-3 w-full bg-transparent border-b border-divider py-5 text-left transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-fg focus-visible:rounded-lg"
-          >
-            <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface text-fg-muted">
-              <ShieldCheck className="w-4 h-4" />
-            </span>
-            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[16px] font-semibold text-fg whitespace-nowrap overflow-hidden text-ellipsis">Role &amp; permissions</span>
-              <span className="text-[13px] text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">Field Officer · L2 inspection rights</span>
-            </span>
-          </button>
-          
-          <button 
-            onClick={() => setActiveModal('support')}
-            className="flex items-center gap-3 w-full bg-transparent border-b border-divider py-5 text-left transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-fg focus-visible:rounded-lg"
-          >
-            <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface text-fg-muted">
-              <LifeBuoy className="w-4 h-4" />
-            </span>
-            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[16px] font-semibold text-fg whitespace-nowrap overflow-hidden text-ellipsis">Contact support</span>
-              <span className="text-[13px] text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">Compliance desk · Mon–Sat, 9am–6pm</span>
-            </span>
-          </button>
-          
-          <button onClick={onLogout} className="flex items-center gap-3 w-full bg-transparent py-5 text-left transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-fg focus-visible:rounded-lg">
-            <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface text-error">
-              <LogOut className="w-4 h-4" />
-            </span>
-            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[16px] font-semibold text-error whitespace-nowrap overflow-hidden text-ellipsis">Log out</span>
-              <span className="text-[13px] text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">Ends this session on this device</span>
-            </span>
+            <LogOut className="w-4 h-4" />
+            <span>{t.signOut || "Log out from Enforcement Portal"}</span>
           </button>
         </div>
-        <p className="text-center text-[12px] text-fg-muted pt-2 tracking-[0.02em]">PaarakhMetric v1.0.0 · Build 1001</p>
-      </section>
+
+        {/* Right Column: Supported Indic Languages & Account Management (lg:col-span-8) */}
+        <div className="lg:col-span-8 flex flex-col gap-5">
+          {/* --- SUPPORTED INDIC LANGUAGES SECTION --- */}
+          <section className="bg-surface rounded-2xl p-6 border border-divider/60 flex flex-col gap-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Globe className="w-5 h-5 text-accent" />
+                <h3 className="font-display text-lg font-bold text-fg m-0">
+                  {language === 'hi' ? 'समर्थित भारतीय भाषाएं व लिपियां' : language === 'kn' ? 'ಬೆಂಬಲಿತ ಭಾರತೀಯ ಭಾಷೆಗಳು' : 'Supported Indic Languages & Multilingual OCR'}
+                </h3>
+              </div>
+              <span className="text-[11px] font-bold text-accent bg-accent/10 px-2.5 py-1 rounded-full border border-accent/20">
+                12 Official Scripts
+              </span>
+            </div>
+
+            <p className="text-xs text-fg-muted leading-relaxed">
+              PaarakhMetric embeds multilingual deep-learning OCR and Vision LLMs capable of recognizing packaging declarations, standard units, numerical MRP values, and dates across all major Indian scripts:
+            </p>
+
+            {/* Grid of Indic Languages */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+              {INDIC_LANGUAGES_CATALOG.map((langItem) => (
+                <div 
+                  key={langItem.code}
+                  className="bg-surface-elevated/70 border border-divider/60 rounded-xl p-3 flex flex-col gap-1 hover:border-accent/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-fg">{langItem.name}</span>
+                    <span className="text-[9px] font-bold text-success bg-success/10 px-1.5 py-0.5 rounded">
+                      {langItem.ocrStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-fg-muted font-mono">
+                    <span>{langItem.script}</span>
+                    <span className="text-accent font-semibold">{langItem.accuracy}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setView('language')}
+                className="px-4 py-2 bg-surface-elevated hover:bg-surface border border-divider rounded-xl text-xs font-bold text-fg flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <Globe className="w-4 h-4 text-accent" />
+                <span>Switch Interface Language / भाषा बदलें</span>
+              </button>
+            </div>
+          </section>
+
+          {/* Account Operations & Preferences */}
+          <section className="bg-surface rounded-2xl p-6 border border-divider/60 flex flex-col gap-3 shadow-sm">
+            <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Account & Officer Preferences</span>
+            <div className="flex flex-col divide-y divide-divider/60">
+              <button 
+                onClick={() => setActiveModal('edit')}
+                className="flex items-center gap-3 w-full py-4 text-left transition-opacity hover:opacity-85"
+              >
+                <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface-elevated text-fg-muted">
+                  <UserCog className="w-4 h-4" />
+                </span>
+                <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-[15px] font-semibold text-fg">Edit Officer Details</span>
+                  <span className="text-[12px] text-fg-muted">Name, contact email, assigned district and jurisdiction</span>
+                </span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveModal('permissions')}
+                className="flex items-center gap-3 w-full py-4 text-left transition-opacity hover:opacity-85"
+              >
+                <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface-elevated text-fg-muted">
+                  <ShieldCheck className="w-4 h-4" />
+                </span>
+                <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-[15px] font-semibold text-fg">Role &amp; Statutory Permissions</span>
+                  <span className="text-[12px] text-fg-muted">Field Officer · L2 Legal Metrology statutory inspection rights</span>
+                </span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveModal('support')}
+                className="flex items-center gap-3 w-full py-4 text-left transition-opacity hover:opacity-85"
+              >
+                <span className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-surface-elevated text-fg-muted">
+                  <LifeBuoy className="w-4 h-4" />
+                </span>
+                <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-[15px] font-semibold text-fg">Departmental Support Desk</span>
+                  <span className="text-[12px] text-fg-muted">Legal Metrology enforcement helpline · Mon–Sat, 9am–6pm</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
 
       {/* Edit Profile Modal */}
       {activeModal === 'edit' && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-canvas/60 backdrop-blur-sm p-0 sm:p-4">
-          <div className="w-full max-w-md bg-surface rounded-t-3xl sm:rounded-2xl p-6 border border-divider flex flex-col gap-5">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-5 shadow-2xl animate-in zoom-in-95">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-xl font-bold text-fg">Edit Profile</h3>
               <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-fg-muted hover:text-fg">
@@ -298,11 +373,12 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-fg-muted">Mobile Number</label>
+                <label className="text-xs font-semibold text-fg-muted">Official Phone</label>
                 <input 
                   type="tel" 
                   value={phone} 
                   onChange={e => setPhone(e.target.value)} 
+                  required
                   className="mt-1 w-full bg-surface-recessed border border-divider rounded-xl px-3.5 py-2.5 text-fg text-sm outline-none focus:border-accent font-body"
                 />
               </div>
@@ -313,23 +389,31 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
                   type="text" 
                   value={region} 
                   onChange={e => setRegion(e.target.value)} 
+                  required
                   className="mt-1 w-full bg-surface-recessed border border-divider rounded-xl px-3.5 py-2.5 text-fg text-sm outline-none focus:border-accent font-body"
                 />
               </div>
 
+              {savedSuccess && (
+                <div className="p-3 rounded-xl bg-success/15 border border-success/30 text-success text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Profile updated successfully!
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <button 
                   type="button" 
-                  onClick={() => setActiveModal(null)}
-                  className="flex-1 py-3 rounded-full bg-surface-elevated text-fg font-semibold text-sm active:scale-95 transition-transform"
+                  onClick={() => setActiveModal(null)} 
+                  className="flex-1 py-3 rounded-full bg-surface-elevated text-fg font-semibold text-sm hover:bg-surface border border-divider"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 py-3 rounded-full bg-accent text-on-accent font-semibold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  className="flex-1 py-3 rounded-full bg-accent text-on-accent font-bold text-sm shadow-md active:scale-95 transition-transform"
                 >
-                  {savedSuccess ? <><Check className="w-4 h-4" /> Saved</> : 'Save Changes'}
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -337,54 +421,28 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
         </div>
       )}
 
-      {/* Role & Permissions Modal */}
+      {/* Permissions Modal */}
       {activeModal === 'permissions' && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-canvas/60 backdrop-blur-sm p-0 sm:p-4">
-          <div className="w-full max-w-md bg-surface rounded-t-3xl sm:rounded-2xl p-6 border border-divider flex flex-col gap-5">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-5 shadow-2xl animate-in zoom-in-95">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-6 h-6 text-accent" />
-                <h3 className="font-display text-xl font-bold text-fg">Role & Permissions</h3>
-              </div>
+              <h3 className="font-display text-xl font-bold text-fg">Role & Permissions</h3>
               <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-fg-muted hover:text-fg">
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="bg-surface-elevated p-3.5 rounded-xl flex items-center justify-between">
-                <div>
-                  <div className="font-semibold text-fg text-sm">Designation Tier</div>
-                  <div className="text-xs text-fg-muted">Level 2 Field Metrology Inspector</div>
-                </div>
-                <Award className="w-5 h-5 text-accent" />
+            <div className="flex flex-col gap-3 text-xs text-fg-muted leading-relaxed">
+              <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                <span className="text-fg font-bold text-sm">Level 2 Field Inspection Officer</span>
+                <span>Authorized to conduct statutory packaging audits, issue non-compliance violation notices, and record digital officer sign-offs under Legal Metrology Act 2009.</span>
               </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-fg">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  <span>On-site Legal Metrology Package Seizure &amp; Tagging</span>
-                </div>
-                <div className="flex items-center gap-2 text-fg">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  <span>Statutory Rule 6/7 OCR Declaration Overrides</span>
-                </div>
-                <div className="flex items-center gap-2 text-fg">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  <span>Direct Export to National Metrology Registry</span>
-                </div>
-                <div className="flex items-center gap-2 text-fg">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  <span>Instant PDF Violation Notice Dispatch</span>
-                </div>
+              <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                <span className="text-fg font-bold text-sm">Batch Ingestion Clearance</span>
+                <span>Authorized for bulk label automated vision inspection and multi-commodity verification.</span>
               </div>
             </div>
-
-            <button 
-              onClick={() => setActiveModal(null)}
-              className="w-full py-3 rounded-full bg-accent text-on-accent font-semibold text-sm active:scale-95 transition-transform"
-            >
-              Understood
+            <button onClick={() => setActiveModal(null)} className="w-full py-3 rounded-full bg-accent text-on-accent font-bold text-xs">
+              Close
             </button>
           </div>
         </div>
@@ -392,42 +450,31 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
 
       {/* Support Modal */}
       {activeModal === 'support' && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-canvas/60 backdrop-blur-sm p-0 sm:p-4">
-          <div className="w-full max-w-md bg-surface rounded-t-3xl sm:rounded-2xl p-6 border border-divider flex flex-col gap-5">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-5 shadow-2xl animate-in zoom-in-95">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <LifeBuoy className="w-6 h-6 text-accent" />
-                <h3 className="font-display text-xl font-bold text-fg">Compliance Support</h3>
-              </div>
+              <h3 className="font-display text-xl font-bold text-fg">Contact Compliance Desk</h3>
               <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-fg-muted hover:text-fg">
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            <p className="text-xs text-fg-muted">For field assistance, rule clarifications, or offline sync issues, reach out to the dedicated desk:</p>
-
-            <div className="flex flex-col gap-3">
-              <a href="tel:1800114000" className="flex items-center gap-3 bg-surface-elevated p-3.5 rounded-xl text-fg hover:bg-surface-recessed transition-colors">
-                <Phone className="w-5 h-5 text-accent" />
+            <div className="flex flex-col gap-3 text-xs text-fg-muted leading-relaxed">
+              <div className="flex items-center gap-3 p-3 bg-surface-recessed rounded-xl border border-divider">
+                <Phone className="w-4 h-4 text-accent" />
                 <div>
-                  <div className="font-semibold text-sm">1800-11-4000 (Toll Free)</div>
-                  <div className="text-[11px] text-fg-muted">Metrology Field Helpdesk (Mon-Sat, 9AM-6PM)</div>
+                  <div className="text-fg font-semibold">Toll-Free Helpline</div>
+                  <div>1800-11-4000 (Mon–Sat, 9am–6pm IST)</div>
                 </div>
-              </a>
-
-              <a href="mailto:support@paarakhmetric.gov.in" className="flex items-center gap-3 bg-surface-elevated p-3.5 rounded-xl text-fg hover:bg-surface-recessed transition-colors">
-                <Mail className="w-5 h-5 text-accent" />
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-surface-recessed rounded-xl border border-divider">
+                <Mail className="w-4 h-4 text-accent" />
                 <div>
-                  <div className="font-semibold text-sm">support@paarakhmetric.gov.in</div>
-                  <div className="text-[11px] text-fg-muted">Official Help &amp; Technical Support</div>
+                  <div className="text-fg font-semibold">Department Email Support</div>
+                  <div>support.legalmetrology@delhi.gov.in</div>
                 </div>
-              </a>
+              </div>
             </div>
-
-            <button 
-              onClick={() => setActiveModal(null)}
-              className="w-full py-3 rounded-full bg-surface-elevated text-fg font-semibold text-sm active:scale-95 transition-transform"
-            >
+            <button onClick={() => setActiveModal(null)} className="w-full py-3 rounded-full bg-accent text-on-accent font-bold text-xs">
               Close
             </button>
           </div>

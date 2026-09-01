@@ -752,6 +752,7 @@ export default function App() {
             onStartScan={() => { startCamera(); setCurrentPage('scan'); }}
             onBatchUploadClick={() => batchFileInputRef.current?.click()}
             language={language}
+            setLanguage={setLanguage}
           />
         )}
 

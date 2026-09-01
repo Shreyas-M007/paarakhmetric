@@ -119,11 +119,14 @@ export default function InspectionsScreen({
           </span>
         </div>
 
-        <InspectionList 
-          title=""
-          inspections={list} 
-          onRowClick={onRowClick} 
-        />
+        <div className="bg-surface rounded-2xl p-5 border border-divider/60 shadow-sm">
+          <InspectionList 
+            title=""
+            inspections={list} 
+            onRowClick={onRowClick} 
+            gridMode={true}
+          />
+        </div>
       </div>
     </div>
   );

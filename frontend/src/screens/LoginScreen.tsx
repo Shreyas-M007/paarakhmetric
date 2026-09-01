@@ -13,11 +13,25 @@ interface LoginScreenProps {
   setLanguage: (l: Language) => void;
 }
 
-const languages = [
-  { code: 'en' as Language, symbol: 'A', label: 'English', sub: 'English' },
-  { code: 'hi' as Language, symbol: 'अ', label: 'हिन्दी', sub: 'Hindi' },
-  { code: 'kn' as Language, symbol: 'ಅ', label: 'ಕನ್ನಡ', sub: 'Kannada' },
+const languages: Array<{ code: Language; symbol: string; label: string; sub: string }> = [
+  { code: 'en', symbol: 'A', label: 'English', sub: 'English' },
+  { code: 'hi', symbol: 'अ', label: 'हिन्दी', sub: 'Hindi' },
+  { code: 'kn', symbol: 'ಅ', label: 'ಕನ್ನಡ', sub: 'Kannada' },
+  { code: 'ta', symbol: 'அ', label: 'தமிழ்', sub: 'Tamil' },
+  { code: 'te', symbol: 'అ', label: 'తెలుగు', sub: 'Telugu' },
+  { code: 'mr', symbol: 'म', label: 'मराठी', sub: 'Marathi' },
+  { code: 'bn', symbol: 'অ', label: 'বাংলা', sub: 'Bengali' },
 ];
+
+const langSymbolMap: Record<Language, string> = {
+  en: 'A',
+  hi: 'अ',
+  kn: 'ಅ',
+  ta: 'அ',
+  te: 'అ',
+  mr: 'म',
+  bn: 'অ'
+};
 
 export default function LoginScreen({
   onLogin, loginUsername, setLoginUsername, loginPassword, setLoginPassword,
@@ -34,14 +48,15 @@ export default function LoginScreen({
         <div className="relative">
           <button
             onClick={() => setLangOpen(!langOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-divider bg-surface text-fg text-xs font-bold transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-divider bg-surface text-fg text-xs font-bold transition-all shadow-sm hover:bg-surface-elevated active:scale-95 cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5 text-accent" />
-            <span className="w-5 h-5 rounded-md bg-accent text-on-accent flex items-center justify-center text-xs font-bold">
-              {language === 'en' ? 'A' : language === 'hi' ? 'अ' : 'ಅ'}
+            <span className="w-5 h-5 rounded-md bg-accent text-on-accent flex items-center justify-center text-xs font-bold font-display">
+              {langSymbolMap[language] || 'A'}
             </span>
             <ChevronDown className="w-3 h-3 text-fg-muted" />
           </button>
+
 
           {langOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-surface-elevated rounded-xl border border-divider py-1.5 z-50">
