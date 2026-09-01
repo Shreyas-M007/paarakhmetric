@@ -3,6 +3,7 @@ import StatGrid from '../components/StatGrid';
 import FilterBar from '../components/FilterBar';
 import InspectionList, { Inspection } from '../components/InspectionList';
 import MapHero from '../components/MapHero';
+import { Language, translations } from '../i18n';
 
 interface DashboardScreenProps {
   stats: any;
@@ -11,6 +12,7 @@ interface DashboardScreenProps {
   filterOption: string;
   setFilterOption: (opt: string) => void;
   onSearchClick?: () => void;
+  language?: Language;
 }
 
 export default function DashboardScreen({
@@ -19,13 +21,16 @@ export default function DashboardScreen({
   onRowClick,
   filterOption,
   setFilterOption,
-  onSearchClick
+  onSearchClick,
+  language = 'en'
 }: DashboardScreenProps) {
+  const t = translations[language] || translations.en;
+
   const filterOptions = [
-    { id: 'ALL', label: 'All' },
-    { id: 'FLAGGED', label: 'Flagged' },
-    { id: 'COMPLIANT', label: 'Compliant' },
-    { id: 'THIS_WEEK', label: 'This week' },
+    { id: 'ALL', label: t.all || 'All' },
+    { id: 'FLAGGED', label: t.violationsFound || 'Flagged' },
+    { id: 'COMPLIANT', label: t.compliant || 'Compliant' },
+    { id: 'THIS_WEEK', label: language === 'hi' ? 'इस सप्ताह' : language === 'kn' ? 'ಈ ವಾರ' : 'This week' },
   ];
 
   const compliant = stats.compliant || 0;
@@ -44,12 +49,15 @@ export default function DashboardScreen({
       <section className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <ShieldCheck className="w-9 h-9 text-accent" />
-          <h1 className="font-display text-[28px] leading-[32px] font-bold tracking-tight m-0">PaarakhMetric</h1>
+          <div className="flex flex-col">
+            <h1 className="font-display text-[28px] leading-[32px] font-bold tracking-tight m-0">{t.appName}</h1>
+            <span className="text-[12px] font-semibold text-fg-muted uppercase tracking-wider">{t.appSubtitle}</span>
+          </div>
         </div>
         <button 
           onClick={onSearchClick}
           className="w-10 h-10 rounded-md bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95"
-          title="Search Inspections"
+          title={t.searchInspectionLog || "Search Inspections"}
         >
           <Search className="w-5 h-5" />
         </button>
@@ -57,8 +65,8 @@ export default function DashboardScreen({
 
       <MapHero 
         metricValue={compliant.toString()}
-        metricSub={`${nonCompliant} flagged non-compliant across sites this week`}
-        legendLabel="Today's audit sweep"
+        metricSub={language === 'hi' ? `${nonCompliant} इस सप्ताह गैर-अनुपालन ध्वजांकित` : language === 'kn' ? `${nonCompliant} ಈ ವಾರ ನಿಯಮ ಉಲ್ಲಂಘನೆ ಗುರುತಿಸಲಾಗಿದೆ` : `${nonCompliant} flagged non-compliant across sites this week`}
+        legendLabel={language === 'hi' ? "आज का ऑडिट स्वीप" : language === 'kn' ? "ಇಂದಿನ ತಪಾಸಣೆ ಸಾರಾಂಶ" : "Today's audit sweep"}
         legendPass={compliant}
         legendFail={nonCompliant}
         legendReview={review}
@@ -67,9 +75,9 @@ export default function DashboardScreen({
       <StatGrid 
         columns={3}
         items={[
-          { id: 'compliant', label: 'Compliant', value: compliant, variant: 'pass' },
-          { id: 'non-compliant', label: 'Non-compliant', value: nonCompliant, variant: 'fail' },
-          { id: 'review', label: 'Review', value: review, variant: 'review' }
+          { id: 'compliant', label: t.compliant, value: compliant, variant: 'pass' },
+          { id: 'non-compliant', label: t.violationsFound, value: nonCompliant, variant: 'fail' },
+          { id: 'review', label: t.needsReview, value: review, variant: 'review' }
         ]} 
       />
 
@@ -80,10 +88,11 @@ export default function DashboardScreen({
       />
 
       <InspectionList 
-        title={filterOption === 'FLAGGED' ? 'Flagged Violations' : filterOption === 'COMPLIANT' ? 'Compliant Products' : 'Recent inspections'}
+        title={filterOption === 'FLAGGED' ? t.violationsFound : filterOption === 'COMPLIANT' ? t.compliant : (language === 'hi' ? 'हालिया निरीक्षण' : language === 'kn' ? 'ಇತ್ತೀಚಿನ ತಪಾಸಣೆಗಳು' : 'Recent inspections')}
         inspections={filteredInspections.slice(0, 6)} 
         onRowClick={onRowClick} 
       />
     </div>
   );
 }
+

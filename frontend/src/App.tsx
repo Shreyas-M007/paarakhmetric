@@ -538,9 +538,16 @@ export default function App() {
          };
       });
       
+      const rawImgUrl = analysisData.image_url || '';
+      const fullImgUrl = rawImgUrl ? (rawImgUrl.startsWith('http') ? rawImgUrl : `${API_BASE_URL}${rawImgUrl}`) : capturedImage;
+
       const newRecord = {
         id: inspData.id,
-        product: { name: "Live Scanned Commodity", manufacturer: "Extracted via LLM", category: "General" },
+        product: { 
+          name: analysisData.extracted_data?.product_name?.value || "Live Scanned Commodity", 
+          manufacturer: analysisData.extracted_data?.manufacturer?.value || "Extracted via LLM", 
+          category: analysisData.category || "General" 
+        },
         timestamp: new Date().toISOString(),
         status: analysisData.compliance_report?.overall_status || "REQUIRES_REVIEW",
         location: "Mobile Scanner",
@@ -548,16 +555,16 @@ export default function App() {
         declarations: decls,
         compliance_results: analysisData.compliance_report?.results || [],
         notes: "Live scan executed via backend pipeline.",
-        image_url: analysisData.image_url
+        image_url: fullImgUrl
       };
       
       setInspections(prev => [newRecord, ...prev]);
       setSelectedInspectionId(inspData.id);
       setCurrentPage('inspection');
 
-    } catch (err) {
-      console.error(err);
-      alert("Pipeline failed. Make sure backend is running on 8000.");
+    } catch (err: any) {
+      console.error("Pipeline execution error:", err);
+      alert(`Pipeline error: ${err?.message || "Could not complete scan. Please ensure the backend is reachable."}`);
     } finally {
       setIsProcessing(false);
     }
@@ -641,6 +648,7 @@ export default function App() {
           processImage={processImage}
           setCapturedImage={setCapturedImage}
           onBack={() => setCurrentPage('dashboard')}
+          language={language}
         />
       </div>
     );
@@ -654,6 +662,7 @@ export default function App() {
           capturedImage={capturedImage}
           onBack={() => setCurrentPage('history')}
           onManualOverride={handleManualOverride}
+          language={language}
         />
       </div>
     );
@@ -676,6 +685,7 @@ export default function App() {
             filterOption={dashboardFilter}
             setFilterOption={setDashboardFilter}
             onSearchClick={() => setCurrentPage('history')}
+            language={language}
           />
         )}
 
@@ -688,6 +698,7 @@ export default function App() {
             setSearchQuery={setSearchQuery}
             filterOption={ledgerFilter}
             setFilterOption={setLedgerFilter}
+            language={language}
           />
         )}
 
@@ -711,6 +722,7 @@ export default function App() {
           />
         )}
       </Layout>
+
 
 
       {/* FAB - only on dashboard and history tabs */}

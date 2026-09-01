@@ -1,4 +1,5 @@
 import { Camera, Upload, RefreshCw, CheckCircle } from 'lucide-react';
+import { Language, translations } from '../i18n';
 
 interface ScanScreenProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -15,33 +16,36 @@ interface ScanScreenProps {
   processImage: () => void;
   setCapturedImage: (img: string | null) => void;
   onBack: () => void;
+  language?: Language;
 }
-
-const panels = [
-  { name: 'front', label: 'Front (PDP)' },
-  { name: 'back', label: 'Back Panel' },
-  { name: 'left', label: 'Left Side' },
-  { name: 'right', label: 'Right Side' },
-  { name: 'top', label: 'Top View' },
-  { name: 'bottom', label: 'Bottom View' },
-];
 
 export default function ScanScreen({
   videoRef, canvasRef, cameraActive, capturedImage, activeSide, setActiveSide,
   isProcessing, processingStep, startCamera, stopCamera, capturePhoto,
-  processImage, setCapturedImage, onBack
+  processImage, setCapturedImage, onBack, language = 'en'
 }: ScanScreenProps) {
+  const t = translations[language] || translations.en;
+
+  const panels = [
+    { name: 'front', label: t.frontPanelPdp || 'Front (PDP)' },
+    { name: 'back', label: t.backLabel || 'Back Panel' },
+    { name: 'left', label: language === 'hi' ? 'बायां भाग' : language === 'kn' ? 'ಎಡಭಾಗ' : 'Left Side' },
+    { name: 'right', label: language === 'hi' ? 'दायां भाग' : language === 'kn' ? 'ಬಲಭಾಗ' : 'Right Side' },
+    { name: 'top', label: language === 'hi' ? 'ऊपरी दृश्य' : language === 'kn' ? 'ಮೇಲ್ಭಾಗ' : 'Top View' },
+    { name: 'bottom', label: language === 'hi' ? 'निचला दृश्य' : language === 'kn' ? 'ಕೆಳಭಾಗ' : 'Bottom View' },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <section className="flex items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-[28px] leading-[32px] font-bold tracking-tight m-0">Scan Product</h1>
-          <span className="text-[15px] font-medium text-fg-muted">Capture or upload a package label</span>
+          <h1 className="font-display text-[28px] leading-[32px] font-bold tracking-tight m-0">{t.scanTitle || "Scan Product"}</h1>
+          <span className="text-[15px] font-medium text-fg-muted">{t.scanSubtitle || "Capture or upload a package label"}</span>
         </div>
         <button onClick={onBack}
           className="text-[13px] font-semibold text-accent hover:underline">
-          Cancel
+          {t.cancel || "Cancel"}
         </button>
       </section>
 
@@ -57,14 +61,14 @@ export default function ScanScreen({
           {!cameraActive && !capturedImage && (
             <div className="text-center p-6 text-fg-muted">
               <Camera className="w-12 h-12 mx-auto mb-2 stroke-1" />
-              <p className="text-sm font-medium">Camera inactive</p>
-              <p className="text-xs text-fg-muted">Tap below to start or upload an image</p>
+              <p className="text-sm font-medium">{t.cameraInactive || "Camera inactive"}</p>
+              <p className="text-xs text-fg-muted">{t.cameraInactiveSub || "Tap below to start or upload an image"}</p>
             </div>
           )}
           {/* Framing guide */}
           {cameraActive && (
             <div className="absolute inset-8 border-2 border-dashed border-fg/30 rounded-lg pointer-events-none flex items-center justify-center">
-              <span className="text-[10px] text-fg/80 bg-canvas/40 px-2 py-0.5 rounded">Align PDP within frame</span>
+              <span className="text-[10px] text-fg/80 bg-canvas/40 px-2 py-0.5 rounded">{t.alignPdp || "Align PDP within frame"}</span>
             </div>
           )}
         </div>
@@ -74,23 +78,23 @@ export default function ScanScreen({
           {!cameraActive ? (
             <button onClick={startCamera}
               className="flex-1 bg-accent text-on-accent font-semibold py-3 px-4 rounded-full flex items-center justify-center gap-2 text-sm active:scale-95 transition-transform">
-              <Camera className="w-4 h-4" /> Start Camera
+              <Camera className="w-4 h-4" /> {t.startCamera || "Start Camera"}
             </button>
           ) : (
             <>
               <button onClick={capturePhoto}
                 className="flex-1 bg-success text-on-accent font-semibold py-3 px-4 rounded-full flex items-center justify-center gap-2 text-sm active:scale-95 transition-transform">
-                <Camera className="w-4 h-4" /> Capture
+                <Camera className="w-4 h-4" /> {t.capturePhoto || "Capture"}
               </button>
               <button onClick={stopCamera}
                 className="bg-surface-elevated text-fg font-semibold py-3 px-4 rounded-full text-sm active:scale-95 transition-transform">
-                Cancel
+                {t.cancel || "Cancel"}
               </button>
             </>
           )}
 
           <label className="flex-1 bg-surface-elevated text-fg font-semibold py-3 px-4 rounded-full flex items-center justify-center gap-2 text-sm cursor-pointer active:scale-95 transition-transform">
-            <Upload className="w-4 h-4" /> Upload
+            <Upload className="w-4 h-4" /> {t.uploadFile || "Upload"}
             <input type="file" accept="image/*" className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -107,7 +111,7 @@ export default function ScanScreen({
 
       {/* Panel selector */}
       <section className="flex flex-col gap-3">
-        <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">Active panel side</span>
+        <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">{t.activePanel || "Active packaging panel"}</span>
         <div className="grid grid-cols-3 gap-2">
           {panels.map((panel) => (
             <button key={panel.name} onClick={() => setActiveSide(panel.name)}
@@ -127,7 +131,7 @@ export default function ScanScreen({
 
       {/* Process button */}
       <section className="bg-surface rounded-2xl p-5">
-        <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body block mb-3">Compliance Processing</span>
+        <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body block mb-3">{t.processingCompliance || "Compliance Processing"}</span>
         {isProcessing ? (
           <div className="flex flex-col items-center gap-3 py-4">
             <RefreshCw className="w-8 h-8 text-accent animate-spin" />
@@ -137,11 +141,11 @@ export default function ScanScreen({
           <button disabled={!capturedImage} onClick={processImage}
             className={`w-full py-3.5 px-4 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               capturedImage
-                ? 'bg-accent text-on-accent active:scale-95'
-                : 'bg-surface-elevated text-fg-muted cursor-not-allowed'
+                ? 'bg-accent text-on-accent active:scale-95 shadow-lg shadow-accent/20 cursor-pointer'
+                : 'bg-surface-elevated text-fg-muted cursor-not-allowed opacity-50'
             }`}>
             <CheckCircle className="w-5 h-5" />
-            Run OCR & Compliance Check
+            {t.runOcr || "Run OCR & Compliance Check"}
           </button>
         )}
       </section>
@@ -150,3 +154,4 @@ export default function ScanScreen({
     </div>
   );
 }
+

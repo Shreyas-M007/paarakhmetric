@@ -74,7 +74,7 @@ export default function Layout({ children, currentPage, onPageChange, language, 
       <main className="flex-1 w-full px-5 pt-2 pb-[calc(80px+env(safe-area-inset-bottom,20px))] overflow-y-auto">
         {children}
       </main>
-      <TabBar currentPage={currentPage} onPageChange={onPageChange} />
+      <TabBar currentPage={currentPage} onPageChange={onPageChange} language={language} />
     </div>
   );
 }

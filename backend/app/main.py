@@ -590,10 +590,16 @@ for r in list(app.routes):
         )
 app.include_router(api_router)
 
+# Mount uploads directory for packaging photos
+if os.path.exists(UPLOAD_DIR):
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+
 # Serve frontend build if present
 from fastapi.staticfiles import StaticFiles
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../frontend/dist"))
 if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+
 
 

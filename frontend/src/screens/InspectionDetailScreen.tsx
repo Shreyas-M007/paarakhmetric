@@ -1,24 +1,29 @@
 import { useState } from 'react';
 import { ArrowLeft, Download, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save } from 'lucide-react';
 import { computeRuleTally } from '../utils/mapInspection';
+import { Language, translations } from '../i18n';
 
 interface InspectionDetailScreenProps {
   inspection: any;
   capturedImage: string | null;
   onBack: () => void;
   onManualOverride: (fieldName: string, newValue: string) => void;
+  language?: Language;
 }
 
 export default function InspectionDetailScreen({
-  inspection, capturedImage, onBack, onManualOverride
+  inspection, capturedImage, onBack, onManualOverride, language = 'en'
 }: InspectionDetailScreenProps) {
   const [inspectingSide, setInspectingSide] = useState('front');
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const t = translations[language] || translations.en;
+
+  const displayImage = capturedImage || inspection.image_url;
 
   const { failed, total } = computeRuleTally(inspection.compliance_results);
-  const statusLabel = inspection.status === 'COMPLIANT' ? 'Compliant' :
-    inspection.status === 'NON_COMPLIANT' ? 'Non-compliant' : 'Review';
+  const statusLabel = inspection.status === 'COMPLIANT' ? (t.compliant || 'Compliant') :
+    inspection.status === 'NON_COMPLIANT' ? (t.fail || 'Non-compliant') : (t.needsReview || 'Review');
   const statusColor = inspection.status === 'COMPLIANT' ? 'text-success' :
     inspection.status === 'NON_COMPLIANT' ? 'text-error' : 'text-warning';
 
@@ -38,7 +43,7 @@ export default function InspectionDetailScreen({
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display text-[24px] leading-[28px] font-bold tracking-tight m-0 truncate">
-            Inspection #{inspection.id}
+            {language === 'hi' ? `निरीक्षण #${inspection.id}` : language === 'kn' ? `ತಪಾಸಣೆ #${inspection.id}` : `Inspection #${inspection.id}`}
           </h1>
           <span className="text-[13px] text-fg-muted truncate block">
             {inspection.product?.name || 'Packaged Item'} · {inspection.timestamp ? new Date(inspection.timestamp).toLocaleDateString() : 'N/A'}
@@ -66,7 +71,7 @@ export default function InspectionDetailScreen({
       <section className="bg-surface rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body flex items-center gap-1.5">
-            <Scan className="w-4 h-4 text-accent" /> Label Visualizer
+            <Scan className="w-4 h-4 text-accent" /> {t.labelVisualizer || "Label Visualizer"}
           </span>
           <span className="text-[10px] bg-surface-elevated text-fg-muted px-2 py-0.5 rounded font-mono">
             {inspection.product?.category || 'General'}
@@ -82,14 +87,14 @@ export default function InspectionDetailScreen({
                   ? 'bg-accent text-on-accent border-accent'
                   : 'bg-surface-elevated text-fg-muted border-transparent hover:bg-surface-elevated'
               }`}>
-              {side === 'front' ? 'Front (PDP)' : side === 'back' ? 'Back Panel' : 'Side Views'}
+              {side === 'front' ? (t.frontPanelPdp || 'Front (PDP)') : side === 'back' ? (t.backLabel || 'Back Panel') : (t.sideViews || 'Side Views')}
             </button>
           ))}
         </div>
 
         <div className="relative aspect-square bg-surface-recessed flex items-center justify-center mx-4 mb-4 rounded-lg overflow-hidden">
-          {capturedImage ? (
-            <img src={capturedImage} alt="Captured Package" className="w-full h-full object-contain" />
+          {displayImage ? (
+            <img src={displayImage} alt="Captured Package" className="w-full h-full object-contain" />
           ) : (
             <div className="flex flex-col items-center justify-center text-fg-muted p-4 text-center">
               <Scan className="w-16 h-16 mb-3 stroke-1 opacity-30" />
@@ -97,6 +102,9 @@ export default function InspectionDetailScreen({
               <p className="text-[10px] text-fg-muted mt-1">Bounding overlays display detected declarations</p>
             </div>
           )}
+        </div>
+      </section>
+
 
           {/* Bounding box overlays */}
           {capturedImage && inspection.declarations?.map((decl: any) => {
