@@ -124,8 +124,9 @@ def parse_with_vision_llm(image_path: str, fallback_ocr_text: str = "") -> Dict[
     try:
         img = Image.open(image_path)
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.6-flash',
             contents=[img, prompt],
+
             config={
                 'response_mime_type': 'application/json',
                 'response_schema': LLM_LMPC_Result,

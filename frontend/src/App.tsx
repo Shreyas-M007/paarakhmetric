@@ -188,29 +188,42 @@ Return JSON ONLY with this schema:
   ]
 }`;
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { text: prompt },
-          { inline_data: { mime_type: mimeType, data: cleanBase64 } }
-        ]
-      }],
-      generationConfig: { response_mime_type: "application/json" }
-    })
-  });
+  const models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Gemini Vision API error ${res.status}: ${errorText}`);
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mimeType, data: cleanBase64 } }
+            ]
+          }],
+          generationConfig: { response_mime_type: "application/json" }
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          return JSON.parse(rawText);
+        }
+      } else {
+        const errorText = await res.text();
+        lastError = new Error(`Gemini Vision API (${model}) error ${res.status}: ${errorText}`);
+      }
+    } catch (err) {
+      lastError = err;
+    }
   }
 
-  const data = await res.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) throw new Error("Empty response from Gemini Vision API");
-  return JSON.parse(rawText);
+  throw lastError || new Error("Gemini Vision API execution failed");
 }
 
 export default function App() {
@@ -244,15 +257,19 @@ export default function App() {
   });
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
 
-  // --- Search & Filter ---
+  // --- Search & Filters ---
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, _setStatusFilter] = useState<string>('ALL');
   const [categoryFilter, _setCategoryFilter] = useState<string>('ALL');
+  const [dashboardFilter, setDashboardFilter] = useState<string>('ALL');
+  const [ledgerFilter, setLedgerFilter] = useState<string>('ALL');
 
   // --- Language ---
   const [language, setLanguage] = useState<Language>(() => {
     const saved = localStorage.getItem('paarakhmetric_language');
-    if (saved === 'hi' || saved === 'kn' || saved === 'en') return saved;
+    if (saved && ['en', 'hi', 'kn', 'ta', 'te', 'mr', 'bn'].includes(saved)) {
+      return saved as Language;
+    }
     return 'en';
   });
 
@@ -280,15 +297,12 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null!);
 
   // --- Gemini Vision API Key ---
-  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => localStorage.getItem('paarakhmetric_gemini_api_key') || '');
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => localStorage.getItem('paarakhmetric_gemini_api_key') || 'AIzaSyDnnegRrjwL3yidVJgHmQ48R_IyEqEF9Gs');
   
   const handleSaveGeminiKey = (key: string) => {
     setGeminiApiKey(key);
     localStorage.setItem('paarakhmetric_gemini_api_key', key);
   };
-
-
-
 
   // --- Batch Upload ---
   const [batchQueue, setBatchQueue] = useState<Array<{ file: File; name: string; previewUrl: string }>>([]);
@@ -304,9 +318,6 @@ export default function App() {
     total: 24, compliant: 15, nonCompliant: 6, review: 3
   });
 
-  // --- Dashboard & Ledger filter ---
-  const [dashboardFilter, setDashboardFilter] = useState<string>('ALL');
-  const [ledgerFilter, setLedgerFilter] = useState<string>('ALL');
 
   // ============================================================
   //  EFFECTS
