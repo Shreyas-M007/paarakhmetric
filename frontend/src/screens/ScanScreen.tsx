@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Camera, Upload, RefreshCw, CheckCircle, ShieldCheck, Tag, Layers } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Camera, Upload, RefreshCw, CheckCircle, ShieldCheck, Tag, Layers, X } from 'lucide-react';
 import { Language, translations, getCategoryTranslation } from '../i18n';
 
 
@@ -45,6 +45,8 @@ export default function ScanScreen({
   const t = translations[language] || translations.en;
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [keyInput, setKeyInput] = useState(geminiApiKey);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const panels = [
     { name: 'front', label: t.frontPanelPdp },
@@ -54,6 +56,31 @@ export default function ScanScreen({
     { name: 'top', label: t.topView },
     { name: 'bottom', label: t.bottomView },
   ];
+
+  const handleProcessFile = (file: File) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    if (cameraActive) stopCamera();
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setCapturedImage(e.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+
+    if (!commodityName.trim()) {
+      const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+      setCommodityName(cleanName);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleProcessFile(file);
+  };
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -72,7 +99,7 @@ export default function ScanScreen({
                   : 'text-accent bg-accent/10 border-accent/30 hover:bg-accent/20'
               }`}
             >
-              <span>⚡ {geminiApiKey ? 'Gemini AI OCR Active' : 'Configure Gemini API Key'}</span>
+              <span>⚡ {geminiApiKey ? 'Gemini 3.6 Vision AI (Active)' : 'Configure Gemini API Key'}</span>
             </button>
           </div>
           <span className="text-[14px] text-fg-muted">
@@ -117,7 +144,7 @@ export default function ScanScreen({
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowKeyModal(false)}
-                  className="px-3 py-1.5 text-xs text-fg-muted bg-surface-elevated rounded-xl"
+                  className="px-3 py-1.5 text-xs text-fg-muted bg-surface-elevated rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -126,7 +153,7 @@ export default function ScanScreen({
                     if (onSaveGeminiKey) onSaveGeminiKey(keyInput.trim());
                     setShowKeyModal(false);
                   }}
-                  className="px-4 py-1.5 text-xs font-bold text-on-accent bg-accent rounded-xl"
+                  className="px-4 py-1.5 text-xs font-bold text-on-accent bg-accent rounded-xl cursor-pointer"
                 >
                   Save Key
                 </button>
@@ -136,72 +163,133 @@ export default function ScanScreen({
         </div>
       )}
 
-
       {/* Responsive Desktop Multi-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Camera Viewfinder / Preview & Actions (lg:col-span-6) */}
+        {/* Left Column: Viewfinder / Upload Dropzone / Photo Preview (lg:col-span-6) */}
         <div className="lg:col-span-6 flex flex-col gap-4">
-          <section className="bg-surface rounded-2xl overflow-hidden border border-divider/60 shadow-sm">
-            <div className="relative w-full aspect-[4/3] bg-surface-recessed flex items-center justify-center overflow-hidden">
+          <section className="bg-surface rounded-2xl overflow-hidden border border-divider/60 shadow-sm flex flex-col">
+            
+            {/* Viewfinder Canvas */}
+            <div 
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`relative w-full aspect-[4/3] bg-surface-recessed flex items-center justify-center overflow-hidden transition-all ${
+                isDragging ? 'border-2 border-dashed border-accent bg-accent/5' : ''
+              }`}
+            >
+              {/* 1. Camera Active */}
               {cameraActive && (
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                <>
+                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                  <div className="absolute inset-8 border-2 border-dashed border-accent/70 rounded-xl pointer-events-none flex items-center justify-center">
+                    <span className="text-[11px] font-bold text-on-accent bg-accent/90 px-3 py-1 rounded-full shadow-lg">
+                      {t.alignPdp || "Align Principal Display Panel (PDP)"}
+                    </span>
+                  </div>
+                </>
               )}
+
+              {/* 2. Photo Uploaded / Captured */}
               {!cameraActive && capturedImage && (
-                <img src={capturedImage} alt="Captured preview" className="w-full h-full object-contain" />
-              )}
-              {!cameraActive && !capturedImage && (
-                <div className="text-center p-6 text-fg-muted">
-                  <Camera className="w-14 h-14 mx-auto mb-2 stroke-1 text-accent" />
-                  <p className="text-sm font-semibold text-fg">{t.cameraInactive || "Camera inactive"}</p>
-                  <p className="text-xs text-fg-muted mt-1">{t.cameraInactiveSub || "Tap below to start camera or select an image file"}</p>
+                <div className="relative w-full h-full flex items-center justify-center bg-black/90 group">
+                  <img src={capturedImage} alt="Uploaded Package Preview" className="w-full h-full object-contain" />
+                  
+                  {/* Overlay Badge */}
+                  <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-sm text-success text-[11px] font-bold px-3 py-1.5 rounded-xl border border-success/30 flex items-center gap-1.5 shadow-lg">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>Photo Ready for AI Verification</span>
+                  </div>
+
+                  {/* Quick Action Overlay */}
+                  <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-black/80 hover:bg-black text-white text-xs font-bold px-3 py-1.5 rounded-xl border border-white/20 flex items-center gap-1.5 shadow-lg cursor-pointer transition-colors"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-accent" /> Change Photo
+                    </button>
+                    <button
+                      onClick={() => setCapturedImage(null)}
+                      className="bg-black/80 hover:bg-black text-error text-xs font-bold px-3 py-1.5 rounded-xl border border-error/30 flex items-center gap-1.5 shadow-lg cursor-pointer transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" /> Clear
+                    </button>
+                  </div>
                 </div>
               )}
-              {/* Framing guide */}
-              {cameraActive && (
-                <div className="absolute inset-8 border-2 border-dashed border-accent/70 rounded-xl pointer-events-none flex items-center justify-center">
-                  <span className="text-[11px] font-bold text-on-accent bg-accent/90 px-3 py-1 rounded-full shadow-lg">
-                    {t.alignPdp || "Align Principal Display Panel (PDP)"}
+
+              {/* 3. Empty State (Clickable Drag-and-Drop Dropzone) */}
+              {!cameraActive && !capturedImage && (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-full p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-surface-elevated/40 transition-colors"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mb-3 text-accent group-hover:scale-105 transition-transform">
+                    <Upload className="w-8 h-8 stroke-[1.75]" />
+                  </div>
+                  <h3 className="font-display text-base font-bold text-fg mb-1">
+                    Click to Upload Package Photo
+                  </h3>
+                  <p className="text-xs text-fg-muted max-w-xs leading-relaxed mb-3">
+                    Drag & drop your package image here, or browse files from your computer (JPG, PNG, WEBP).
+                  </p>
+                  <span className="text-[11px] font-bold text-accent bg-accent/15 px-3 py-1.5 rounded-full border border-accent/30">
+                    Supports high-resolution labels & LMPC declarations
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2.5 p-4 bg-surface-elevated/40 border-t border-divider/50">
+            {/* Bottom Action Bar */}
+            <div className="flex gap-2.5 p-4 bg-surface-elevated/40 border-t border-divider/50 flex-wrap">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/jpg,image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleProcessFile(file);
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 bg-accent text-on-accent font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform shadow-md shadow-accent/20 cursor-pointer"
+              >
+                <Upload className="w-4 h-4" />
+                <span>{capturedImage ? "Replace Uploaded Photo" : "Upload Package Photo"}</span>
+              </button>
+
               {!cameraActive ? (
-                <button onClick={startCamera}
-                  className="flex-1 bg-accent text-on-accent font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform shadow-md shadow-accent/20 cursor-pointer">
-                  <Camera className="w-4 h-4" /> {t.startCamera || "Start Camera"}
+                <button
+                  type="button"
+                  onClick={() => { setCapturedImage(null); startCamera(); }}
+                  className="bg-surface hover:bg-surface-elevated text-fg border border-divider font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform cursor-pointer"
+                >
+                  <Camera className="w-4 h-4 text-accent" />
+                  <span>Use Camera</span>
                 </button>
               ) : (
                 <>
-                  <button onClick={capturePhoto}
-                    className="flex-1 bg-success text-on-accent font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform shadow-md cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="flex-1 bg-success text-on-accent font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform shadow-md cursor-pointer"
+                  >
                     <Camera className="w-4 h-4" /> {t.capturePhoto || "Capture"}
                   </button>
-                  <button onClick={stopCamera}
-                    className="bg-surface text-fg font-semibold py-3 px-4 rounded-xl text-xs active:scale-95 transition-transform border border-divider hover:bg-surface-elevated cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="bg-surface text-fg font-semibold py-3 px-4 rounded-xl text-xs active:scale-95 transition-transform border border-divider hover:bg-surface-elevated cursor-pointer"
+                  >
                     {t.cancel || "Cancel"}
                   </button>
                 </>
               )}
-
-              <label className="flex-1 bg-surface hover:bg-surface-elevated text-fg border border-divider font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs cursor-pointer active:scale-95 transition-transform">
-                <Upload className="w-4 h-4 text-accent" /> {t.uploadFile || "Upload Image"}
-                <input type="file" accept="image/*" className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = () => setCapturedImage(reader.result as string);
-                      reader.readAsDataURL(file);
-                      if (!commodityName) {
-                        const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
-                        setCommodityName(cleanName);
-                      }
-                    }
-                  }} />
-              </label>
             </div>
           </section>
         </div>
@@ -301,14 +389,14 @@ export default function ScanScreen({
             </div>
           </section>
 
-          {/* Run OCR button */}
+          {/* Run OCR / Compliance Verification Button */}
           {capturedImage ? (
             <button onClick={processImage} disabled={isProcessing}
               className="w-full bg-accent text-on-accent font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 text-base active:scale-95 transition-transform disabled:opacity-50 shadow-xl shadow-accent/20 cursor-pointer">
               {isProcessing ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>{processingStep || t.processingCompliance || "Executing AI Compliance Verification..."}</span>
+                  <span>{processingStep || t.processingCompliance || "Executing Gemini 3.6 Vision OCR..."}</span>
                 </>
               ) : (
                 <>
@@ -318,10 +406,13 @@ export default function ScanScreen({
               )}
             </button>
           ) : (
-            <button onClick={startCamera}
-              className="w-full bg-surface-elevated text-fg border border-divider font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 text-sm active:scale-95 transition-transform hover:bg-surface cursor-pointer">
-              <Camera className="w-4 h-4 text-accent" />
-              <span>{t.startCamera || "Capture Photo to Run Compliance Check"}</span>
+            <button 
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full bg-surface-elevated text-fg border border-accent/40 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 text-sm active:scale-95 transition-transform hover:bg-surface cursor-pointer shadow-sm"
+            >
+              <Upload className="w-4 h-4 text-accent" />
+              <span>Select or Drop an Image to Verify</span>
             </button>
           )}
         </div>

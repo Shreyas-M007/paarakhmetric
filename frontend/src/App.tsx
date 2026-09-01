@@ -916,7 +916,7 @@ export default function App() {
             filterOption={dashboardFilter}
             setFilterOption={setDashboardFilter}
             onSearchClick={() => setCurrentPage('history')}
-            onStartScan={() => { startCamera(); setCurrentPage('scan'); }}
+            onStartScan={() => setCurrentPage('scan')}
             onBatchUploadClick={() => batchFileInputRef.current?.click()}
             language={language}
             setLanguage={setLanguage}
@@ -927,7 +927,7 @@ export default function App() {
           <InspectionsScreen
             inspections={mappedInspections}
             onRowClick={viewInspection}
-            onNewInspection={() => { startCamera(); setCurrentPage('scan'); }}
+            onNewInspection={() => setCurrentPage('scan')}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             filterOption={ledgerFilter}
@@ -962,11 +962,11 @@ export default function App() {
 
 
 
-
       {/* FAB - only on dashboard and history tabs */}
       {(currentPage === 'dashboard' || currentPage === 'history') && (
-        <FAB onClick={() => { startCamera(); setCurrentPage('scan'); }} icon="scan" />
+        <FAB onClick={() => setCurrentPage('scan')} icon="scan" />
       )}
+
 
       {/* Batch upload hidden input */}
       <input
