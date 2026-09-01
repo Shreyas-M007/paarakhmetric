@@ -149,10 +149,48 @@ const INITIAL_INSPECTIONS = [
   }
 ];
 
-async function runGeminiVisionAnalysis(apiKey: string, base64Image: string, chosenName: string, chosenCat: string) {
+async function optimizeImageForVision(base64: string): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
 
-  const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
-  const mimeType = base64Image.includes(';') ? base64Image.split(';')[0].split(':')[1] : 'image/jpeg';
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } else {
+          resolve(base64);
+        }
+      };
+      img.onerror = () => resolve(base64);
+      img.src = base64;
+    } catch {
+      resolve(base64);
+    }
+  });
+}
+
+async function runGeminiVisionAnalysis(apiKey: string, base64Image: string, chosenName: string, chosenCat: string) {
+  const optimizedBase64 = await optimizeImageForVision(base64Image);
+  const cleanBase64 = optimizedBase64.includes(',') ? optimizedBase64.split(',')[1] : optimizedBase64;
+  const mimeType = optimizedBase64.includes(';') ? optimizedBase64.split(';')[0].split(':')[1] : 'image/jpeg';
 
   const prompt = `You are an expert Legal Metrology (LMPC Act 2011 & Packaged Commodities Rules) inspector in India.
 Carefully inspect every single label, mark, text, date, and declaration on this package image.
@@ -188,15 +226,19 @@ Return JSON ONLY with this schema:
   ]
 }`;
 
-  const models = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-
+  // Prioritize ultra-fast gemini-3.5-flash with timeout protection
+  const models = ['gemini-3.5-flash', 'gemini-3.6-flash'];
   let lastError: any = null;
 
   for (const model of models) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey.trim()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [{
             parts: [
@@ -208,15 +250,14 @@ Return JSON ONLY with this schema:
         })
       });
 
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawText) {
           return JSON.parse(rawText);
         }
-      } else {
-        const errorText = await res.text();
-        lastError = new Error(`Gemini Vision API (${model}) error ${res.status}: ${errorText}`);
       }
     } catch (err) {
       lastError = err;
@@ -225,6 +266,7 @@ Return JSON ONLY with this schema:
 
   throw lastError || new Error("Gemini Vision API execution failed");
 }
+
 
 export default function App() {
 
@@ -613,7 +655,7 @@ export default function App() {
 
       // 1. If Gemini Vision API Key is present, run Direct Multimodal Vision AI!
       if (geminiApiKey && geminiApiKey.trim().length > 5) {
-        setProcessingStep("Executing Gemini 2.5 Flash Vision Multimodal OCR...");
+        setProcessingStep("Executing Gemini 3.5 Flash Multimodal Vision AI...");
         try {
           const geminiResult = await runGeminiVisionAnalysis(geminiApiKey, capturedImage, chosenName, chosenCat);
           if (geminiResult) {
@@ -626,9 +668,10 @@ export default function App() {
             }
           }
         } catch (geminiErr) {
-          console.warn("Gemini Vision direct call failed, falling back to backend pipeline:", geminiErr);
+          console.warn("Gemini Vision direct call failed, falling back to instant local engine:", geminiErr);
         }
       }
+
 
       // 2. If declarations not yet populated, run backend pipeline or intelligent offline fallback
       if (decls.length === 0) {
