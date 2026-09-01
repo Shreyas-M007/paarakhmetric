@@ -771,6 +771,7 @@ export default function App() {
             inspections={mappedInspections}
             onRowClick={viewInspection}
             onSearchClick={() => setCurrentPage('history')}
+            language={language}
           />
         )}
 

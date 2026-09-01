@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Search, FileText, Download, Share2, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, Download, Share2, CheckCircle2, TrendingUp, BarChart3, ShieldCheck } from 'lucide-react';
 import InspectionList, { Inspection } from '../components/InspectionList';
+import { Language } from '../i18n';
+
 
 interface ReportsScreenProps {
   inspections: Inspection[];
   onRowClick: (id: string) => void;
   onSearchClick?: () => void;
+  language?: Language;
 }
 
-export default function ReportsScreen({ inspections, onRowClick, onSearchClick }: ReportsScreenProps) {
+export default function ReportsScreen({ inspections, onRowClick, onSearchClick, language = 'en' }: ReportsScreenProps) {
   const [selectedId, setSelectedId] = useState<string>(inspections[0]?.id || '8042');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -21,9 +24,19 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick }
     id: '8042',
     title: 'Premium Basmati Rice',
     meta: 'Food Grains · Warehouse A, New Delhi',
-    status: 'NON_COMPLIANT',
+    status: 'NON_COMPLIANT' as const,
     timeInfo: 'Today'
   };
+
+  const isNonCompliant = (activeInspection.status as string) === 'NON_COMPLIANT';
+  const isReview = (activeInspection.status as string) === 'REVIEW' || (activeInspection.status as string) === 'REQUIRES_REVIEW';
+  const totalRules = 5;
+  const failCount = isNonCompliant ? 2 : 0;
+  const reviewCount = isReview ? 1 : 0;
+  const passCount = totalRules - failCount - reviewCount;
+  const passRate = Math.round((passCount / totalRules) * 100);
+
+
 
   const handleGeneratePdf = () => {
     // Generate a printable report window for immediate preview and print/save to PDF
@@ -129,21 +142,108 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick }
           </div>
         </div>
 
-        <div>
-          <div className="font-display text-[32px] leading-none font-bold py-4">
-            {activeInspection.status === 'NON_COMPLIANT' ? '2' : activeInspection.status === 'REVIEW' ? '1' : '0'}
-            <span className="text-[18px] font-medium text-fg-muted ml-1">of 5 rules flagged</span>
+        {/* Visual Compliance Graphs & Trends */}
+        <div className="bg-surface-recessed/60 rounded-xl p-4 border border-divider/60 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-bold flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-accent" />
+              {language === 'hi' ? 'अनुपालन रुझान और स्वास्थ्य स्कोर' : language === 'kn' ? 'ಅನುಸರಣೆ ಟ್ರೆಂಡ್‌ಗಳು & ಸ್ಕೋರ್' : 'Compliance Trends & Health Analytics'}
+            </span>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+              passRate >= 80 ? 'bg-success/15 text-success' : passRate >= 60 ? 'bg-warning/15 text-warning' : 'bg-error/15 text-error'
+            }`}>
+              {passRate}% {language === 'hi' ? 'अनुपालन दर' : language === 'kn' ? 'ದರ' : 'Score'}
+            </span>
           </div>
-          <div className="text-[13px] text-fg-muted -mt-2">
-            {activeInspection.status === 'NON_COMPLIANT' ? (
-              <>MRP declaration <span className="text-error font-semibold">missing digits</span> · Net quantity unit non-standard</>
-            ) : activeInspection.status === 'REVIEW' ? (
-              <>Consumer Care helpline OCR confidence low · Manual check suggested</>
-            ) : (
-              <>All Legal Metrology Rule 6/7 statutory declarations verified</>
-            )}
+
+          {/* Metric Bar Distribution */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-between text-[11px] font-medium text-fg-muted">
+              <span>{language === 'hi' ? 'नियम सत्यापन वितरण' : language === 'kn' ? 'ನಿಯಮ ಪರಿಶೀಲನೆ' : 'Statutory Rule Breakdown'}</span>
+              <span className="font-mono text-fg">{passCount} Pass · {failCount} Fail · {reviewCount} Review</span>
+            </div>
+            {/* Multi-segment Progress Bar */}
+            <div className="w-full h-3 bg-surface-elevated rounded-full overflow-hidden flex gap-0.5 p-0.5">
+              <div style={{ width: `${(passCount / totalRules) * 100}%` }} className="bg-success rounded-l-full transition-all duration-500" title={`Pass: ${passCount}`} />
+              {reviewCount > 0 && (
+                <div style={{ width: `${(reviewCount / totalRules) * 100}%` }} className="bg-warning transition-all duration-500" title={`Review: ${reviewCount}`} />
+              )}
+              {failCount > 0 && (
+                <div style={{ width: `${(failCount / totalRules) * 100}%` }} className="bg-error rounded-r-full transition-all duration-500" title={`Fail: ${failCount}`} />
+              )}
+            </div>
+          </div>
+
+          {/* 7-Day Category Compliance Trend Chart */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-divider/40">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-fg-muted font-medium flex items-center gap-1">
+                <BarChart3 className="w-3 h-3 text-accent" />
+                {language === 'hi' ? '7 दिवसीय श्रेणी अनुपालन रुझान' : language === 'kn' ? '7 ದಿನದ ವರ್ಗ ಟ್ರೆಂಡ್' : '7-Day Category Compliance Trend'}
+              </span>
+              <span className="text-[10px] text-accent font-semibold">
+                {activeInspection.meta?.split('·')?.[0]?.trim() || 'General'}
+              </span>
+            </div>
+
+            {/* Mini Bar Chart */}
+            <div className="flex items-end justify-between gap-2 h-16 pt-2 px-1">
+              {[
+                { day: 'Mon', val: 92 },
+                { day: 'Tue', val: 86 },
+                { day: 'Wed', val: 78 },
+                { day: 'Thu', val: 94 },
+                { day: 'Fri', val: passRate },
+                { day: 'Sat', val: 88 },
+                { day: 'Sun', val: 95 }
+              ].map((item, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
+                  <div className="relative w-full flex items-end justify-center h-10 bg-surface-elevated/40 rounded-t">
+                    <div 
+                      style={{ height: `${item.val}%` }} 
+                      className={`w-full rounded-t transition-all duration-500 ${
+                        item.day === 'Fri' ? (passRate < 70 ? 'bg-error' : 'bg-accent') : item.val > 85 ? 'bg-success/70' : 'bg-warning/70'
+                      }`} 
+                    />
+                    {/* Tooltip */}
+                    <div className="absolute -top-6 bg-fg text-canvas text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                      {item.val}%
+                    </div>
+                  </div>
+                  <span className={`text-[9px] font-medium ${item.day === 'Fri' ? 'text-accent font-bold' : 'text-fg-muted'}`}>
+                    {item.day}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Extraction Quality Meters */}
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-divider/40">
+            <div className="flex flex-col gap-1 bg-surface-elevated/50 p-2 rounded-lg">
+              <span className="text-[10px] text-fg-muted font-medium">{language === 'hi' ? 'एआई दृष्टि विश्वास' : language === 'kn' ? 'AI ವಿಶ್ವಾಸ' : 'Vision OCR Accuracy'}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-bold font-mono text-fg">94.8%</span>
+                <span className="text-[10px] text-success font-semibold flex items-center gap-0.5">
+                  <ShieldCheck className="w-3 h-3" /> High
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1 bg-surface-elevated/50 p-2 rounded-lg">
+              <span className="text-[10px] text-fg-muted font-medium">{language === 'hi' ? 'वैधानिक जोखिम रेटिंग' : language === 'kn' ? 'ಅಪಾಯ ರೇಟಿಂಗ್' : 'Commodity Risk'}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-bold text-fg">
+                  {failCount > 0 ? (language === 'hi' ? 'उच्च जोखिम' : language === 'kn' ? 'ಹೆಚ್ಚು' : 'Elevated') : (language === 'hi' ? 'कम जोखिम' : language === 'kn' ? 'ಕಡಿಮೆ' : 'Low Risk')}
+                </span>
+                <span className={`text-[10px] font-semibold ${failCount > 0 ? 'text-error' : 'text-success'}`}>
+                  {failCount > 0 ? 'Action Req.' : 'Nominal'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
+
 
         <div className="flex gap-3">
           <button 
