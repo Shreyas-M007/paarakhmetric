@@ -71,8 +71,9 @@ Return JSON ONLY with this schema:
   ]
 }}"""
 
-    models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-3.6-flash"]
+    models = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-1.5-flash"]
     last_err = None
+
 
 
     for model in models:
