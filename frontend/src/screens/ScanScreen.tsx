@@ -113,7 +113,7 @@ export default function ScanScreen({
               {/* 1. Camera Active */}
               {cameraActive && (
                 <>
-                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                   <div className="absolute inset-8 border-2 border-dashed border-accent/70 rounded-xl pointer-events-none flex items-center justify-center">
                     <span className="text-[11px] font-bold text-on-accent bg-accent/90 px-3 py-1 rounded-full shadow-lg">
                       {t.alignPdp || "Align Principal Display Panel (PDP)"}
@@ -121,6 +121,7 @@ export default function ScanScreen({
                   </div>
                 </>
               )}
+
 
               {/* 2. Photo Uploaded / Captured */}
               {!cameraActive && capturedImage && (

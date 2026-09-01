@@ -617,11 +617,29 @@ export default function App() {
     setCameraActive(true);
     setCapturedImage(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      };
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.muted = true;
+        await videoRef.current.play().catch(() => {});
+      }
     } catch (err) {
       console.error("Camera access error:", err);
-      alert("Could not access camera. Please upload an image or check permissions.");
+      alert("Could not access camera. Please allow camera permissions in your browser or upload an image file.");
       setCameraActive(false);
     }
   };
@@ -636,15 +654,21 @@ export default function App() {
   };
 
   const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
+    if (videoRef.current) {
       const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const width = video.videoWidth || video.clientWidth || 1920;
+      const height = video.videoHeight || video.clientHeight || 1080;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        setCapturedImage(canvas.toDataURL('image/jpeg'));
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(video, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        setCapturedImage(dataUrl);
         stopCamera();
       }
     }
@@ -664,6 +688,7 @@ export default function App() {
       let rulesResults: any[] = [];
       let overallStatus = "COMPLIANT";
       let extractedManufacturer = "Detected Manufacturer";
+      let finalProductName = chosenName;
 
       // 1. If Gemini Vision API Key is present, run Direct Multimodal Vision AI!
       if (geminiApiKey && geminiApiKey.trim().length > 5) {
@@ -676,7 +701,7 @@ export default function App() {
             overallStatus = geminiResult.overall_status || "COMPLIANT";
             if (geminiResult.manufacturer) extractedManufacturer = geminiResult.manufacturer;
             if (geminiResult.product_name && !commodityName.trim()) {
-              // Adopt auto-detected product name
+              finalProductName = geminiResult.product_name;
             }
           }
         } catch (geminiErr) {
@@ -696,14 +721,14 @@ export default function App() {
           const prodRes = await apiCall('/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: chosenName, category: chosenCat })
+            body: JSON.stringify({ name: finalProductName, category: chosenCat })
           });
           const prodData = prodRes.ok ? await prodRes.json() : { id: Date.now() % 10000 };
 
           const inspRes = await apiCall('/inspections', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_id: prodData.id, location: "Mobile Scanner", notes: `Live scan: ${chosenName}` })
+            body: JSON.stringify({ product_id: prodData.id, location: "Mobile Scanner", notes: `Live scan: ${finalProductName}` })
           });
           const inspData = inspRes.ok ? await inspRes.json() : { id: Date.now() % 10000 };
 
@@ -764,7 +789,7 @@ export default function App() {
       const newRecord = {
         id: newId,
         product: { 
-          name: chosenName, 
+          name: finalProductName, 
           manufacturer: extractedManufacturer, 
           category: chosenCat 
         },
@@ -774,11 +799,12 @@ export default function App() {
         officer: user?.name || user?.username || "Officer Shrey",
         declarations: decls,
         compliance_results: rulesResults,
-        notes: `Live scan for ${chosenName} executed and verified.`,
+        notes: `Live scan for ${finalProductName} executed and verified.`,
         image_url: capturedImage
       };
       
       setInspections(prev => [newRecord, ...prev]);
+
       setSelectedInspectionId(newId);
       setCommodityName('');
       setCurrentPage('inspection');
