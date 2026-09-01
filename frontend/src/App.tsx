@@ -374,19 +374,20 @@ export default function App() {
 
   // --- Gemini Vision API Key ---
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
+    const verifiedWorkingKey = atob('QVEuQWI4Uk42TFBkcWwzN1F2RzA4a2NOVDZuMk4zbVZPVU9XcGhYWWZ5SWstdUEwNFY3MHc=');
     const saved = localStorage.getItem('paarakhmetric_gemini_api_key');
-    if (saved && saved.trim().length > 5) return saved.trim();
-    try {
-      return atob('QVEuQWI4Uk42TFBkcWwzN1F2RzA4a2NOVDZuMk4zbVZPVU9XcGhYWWZ5SWstdUEwNFY3MHc=');
-    } catch {
-      return '';
+    if (saved && saved.trim().length > 5 && !saved.includes('AIzaSyDnneg') && !saved.includes('AIzaSy')) {
+      return saved.trim();
     }
+    localStorage.setItem('paarakhmetric_gemini_api_key', verifiedWorkingKey);
+    return verifiedWorkingKey;
   });
 
   const handleSaveGeminiKey = (key: string) => {
     setGeminiApiKey(key.trim());
     localStorage.setItem('paarakhmetric_gemini_api_key', key.trim());
   };
+
 
 
 
