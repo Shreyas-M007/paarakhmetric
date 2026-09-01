@@ -7,19 +7,37 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#f5f7fa',
-          100: '#eaeef4',
-          200: '#d0dae6',
-          300: '#a7bbd2',
-          400: '#7798b9',
-          500: '#53789f',
-          600: '#415f83',
-          700: '#354d6b',
-          800: '#2f425b',
-          900: '#2b394e',
-          950: '#1c2534',
-        }
+        canvas: 'var(--gesso-canvas)',
+        surface: 'var(--gesso-surface)',
+        'surface-elevated': 'var(--gesso-surface-elevated)',
+        'surface-recessed': 'var(--gesso-surface-recessed)',
+        fg: 'var(--gesso-fg)',
+        'fg-muted': 'var(--gesso-fg-muted)',
+        divider: 'var(--gesso-divider)',
+        accent: 'var(--gesso-accent)',
+        'accent-2': 'var(--gesso-accent-2)',
+        'on-accent': 'var(--gesso-on-accent)',
+        success: 'var(--gesso-success)',
+        warning: 'var(--gesso-warning)',
+        error: 'var(--gesso-error)',
+        primary: 'var(--gesso-primary)',
+        secondary: 'var(--gesso-secondary)',
+        lime: 'var(--gesso-lime)',
+      },
+      fontFamily: {
+        display: ['var(--gesso-font-display)', 'sans-serif'],
+        body: ['var(--gesso-font-body)', 'sans-serif'],
+      },
+      borderRadius: {
+        sm: 'var(--gesso-radius-sm)',
+        md: 'var(--gesso-radius-md)',
+        lg: 'var(--gesso-radius-lg)',
+        full: 'var(--gesso-radius-full)',
+      },
+      boxShadow: {
+        sm: 'var(--gesso-shadow-sm)',
+        md: 'var(--gesso-shadow-md)',
+        lg: 'var(--gesso-shadow-lg)',
       }
     },
   },
