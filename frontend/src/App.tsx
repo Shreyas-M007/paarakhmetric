@@ -346,12 +346,8 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null!);
 
   // --- Gemini Vision API Key ---
-  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => localStorage.getItem('paarakhmetric_gemini_api_key') || 'AIzaSyDnnegRrjwL3yidVJgHmQ48R_IyEqEF9Gs');
-  
-  const handleSaveGeminiKey = (key: string) => {
-    setGeminiApiKey(key);
-    localStorage.setItem('paarakhmetric_gemini_api_key', key);
-  };
+  const [geminiApiKey] = useState<string>(() => localStorage.getItem('paarakhmetric_gemini_api_key') || 'AIzaSyDnnegRrjwL3yidVJgHmQ48R_IyEqEF9Gs');
+
 
   // --- Batch Upload ---
   const [batchQueue, setBatchQueue] = useState<Array<{ file: File; name: string; previewUrl: string }>>([]);
@@ -923,8 +919,6 @@ export default function App() {
           setCommodityName={setCommodityName}
           commodityCategory={commodityCategory}
           setCommodityCategory={setCommodityCategory}
-          geminiApiKey={geminiApiKey}
-          onSaveGeminiKey={handleSaveGeminiKey}
           language={language}
         />
       </div>
@@ -1004,11 +998,10 @@ export default function App() {
             onUpdateUser={setUser}
             language={language}
             setLanguage={setLanguage}
-            geminiApiKey={geminiApiKey}
-            onSaveGeminiKey={handleSaveGeminiKey}
           />
         )}
       </Layout>
+
 
 
 

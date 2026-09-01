@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { Camera, Upload, RefreshCw, CheckCircle, ShieldCheck, Tag, Layers, X } from 'lucide-react';
 import { Language, translations, getCategoryTranslation } from '../i18n';
 
-
 interface ScanScreenProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -22,8 +21,6 @@ interface ScanScreenProps {
   setCommodityName: (name: string) => void;
   commodityCategory: string;
   setCommodityCategory: (cat: string) => void;
-  geminiApiKey?: string;
-  onSaveGeminiKey?: (key: string) => void;
   language?: Language;
 }
 
@@ -40,11 +37,9 @@ export default function ScanScreen({
   videoRef, canvasRef, cameraActive, capturedImage, activeSide, setActiveSide,
   isProcessing, processingStep, startCamera, stopCamera, capturePhoto,
   processImage, setCapturedImage, onBack, commodityName, setCommodityName,
-  commodityCategory, setCommodityCategory, geminiApiKey = '', onSaveGeminiKey, language = 'en'
+  commodityCategory, setCommodityCategory, language = 'en'
 }: ScanScreenProps) {
   const t = translations[language] || translations.en;
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [keyInput, setKeyInput] = useState(geminiApiKey);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -87,21 +82,9 @@ export default function ScanScreen({
       {/* Header */}
       <section className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-[26px] sm:text-[28px] font-bold tracking-tight m-0 text-fg">
-              {t.scanTitle || "Scan Product"}
-            </h1>
-            <button
-              onClick={() => setShowKeyModal(true)}
-              className={`text-[11px] font-bold px-2.5 py-1 rounded-full border flex items-center gap-1 cursor-pointer transition-colors ${
-                geminiApiKey
-                  ? 'text-success bg-success/10 border-success/30 hover:bg-success/20'
-                  : 'text-accent bg-accent/10 border-accent/30 hover:bg-accent/20'
-              }`}
-            >
-              <span>⚡ {geminiApiKey ? 'Gemini 3.6 Vision AI (Active)' : 'Configure Gemini API Key'}</span>
-            </button>
-          </div>
+          <h1 className="font-display text-[26px] sm:text-[28px] font-bold tracking-tight m-0 text-fg">
+            {t.scanTitle || "Scan Product"}
+          </h1>
           <span className="text-[14px] text-fg-muted">
             {t.scanSubtitle || "Capture or upload a package label for AI statutory verification"}
           </span>
@@ -111,57 +94,6 @@ export default function ScanScreen({
           {t.cancel || "Cancel"}
         </button>
       </section>
-
-      {/* Gemini API Key Quick Modal */}
-      {showKeyModal && (
-        <div className="fixed inset-0 z-[250] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-bold text-fg">Google Gemini Vision API Key</h3>
-              <button onClick={() => setShowKeyModal(false)} className="text-fg-muted hover:text-fg">
-                ✕
-              </button>
-            </div>
-            <p className="text-xs text-fg-muted leading-relaxed">
-              Enter your Google Gemini API key to execute live multimodal OCR directly on your uploaded package photos.
-            </p>
-            <input
-              type="password"
-              value={keyInput}
-              onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="Paste AIzaSy... API key"
-              className="w-full bg-surface-elevated border border-divider rounded-xl px-3.5 py-2.5 text-xs text-fg font-mono outline-none focus:border-accent"
-            />
-            <div className="flex justify-between items-center pt-2">
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-accent hover:underline font-semibold"
-              >
-                Get Free API Key ↗
-              </a>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowKeyModal(false)}
-                  className="px-3 py-1.5 text-xs text-fg-muted bg-surface-elevated rounded-xl cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (onSaveGeminiKey) onSaveGeminiKey(keyInput.trim());
-                    setShowKeyModal(false);
-                  }}
-                  className="px-4 py-1.5 text-xs font-bold text-on-accent bg-accent rounded-xl cursor-pointer"
-                >
-                  Save Key
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Responsive Desktop Multi-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -396,7 +328,7 @@ export default function ScanScreen({
               {isProcessing ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>{processingStep || t.processingCompliance || "Executing Gemini 3.6 Vision OCR..."}</span>
+                  <span>{processingStep || t.processingCompliance || "Executing Gemini Vision OCR..."}</span>
                 </>
               ) : (
                 <>
