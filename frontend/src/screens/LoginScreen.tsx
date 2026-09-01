@@ -116,24 +116,10 @@ export default function LoginScreen({
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 pt-2">
-            <button type="submit"
-              className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-on-accent hover:brightness-110 active:scale-98 transition-all">
-              {t.signIn}
-            </button>
-
-            <button 
-              type="button"
-              onClick={() => {
-                setLoginUsername('officer_shrey');
-                setLoginPassword('password123');
-                onLogin({ preventDefault: () => {} } as any);
-              }}
-              className="w-full rounded-xl bg-surface-elevated py-2.5 text-xs font-semibold text-fg hover:bg-surface-recessed active:scale-98 transition-all flex items-center justify-center gap-1.5"
-            >
-              <span>⚡</span> Quick Demo Sign In (Officer Shrey)
-            </button>
-          </div>
+          <button type="submit"
+            className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-on-accent hover:brightness-110 active:scale-98 transition-all">
+            {t.signIn}
+          </button>
 
           <div className="text-center text-[10px] text-fg-muted space-y-1 pt-2 border-t border-divider">
             <p>{t.defaultCredentials}</p>

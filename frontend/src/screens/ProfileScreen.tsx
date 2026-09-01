@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Landmark, Moon, Sun, Contrast, X, Check, Phone, Mail, Award, CheckCircle2 } from 'lucide-react';
 import StatGrid from '../components/StatGrid';
 
@@ -21,16 +21,34 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
   const [region, setRegion] = useState(user?.region || 'New Delhi NCR');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Sync state whenever user prop updates or mounts
+  useEffect(() => {
+    if (user) {
+      if (user.name) setName(user.name);
+      else if (user.username) setName(user.username);
+      if (user.email) setEmail(user.email);
+      if (user.phone) setPhone(user.phone);
+      if (user.region) setRegion(user.region);
+    }
+  }, [user]);
+
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    const updated = { 
+      ...user, 
+      name: name.trim(), 
+      email: email.trim(), 
+      phone: phone.trim(), 
+      region: region.trim() 
+    };
     if (onUpdateUser) {
-      onUpdateUser({ ...user, name, email, phone, region });
+      onUpdateUser(updated);
     }
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
       setActiveModal(null);
-    }, 900);
+    }, 600);
   };
 
   if (view === 'theme') {

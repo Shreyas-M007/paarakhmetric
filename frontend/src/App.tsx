@@ -126,7 +126,13 @@ const INITIAL_INSPECTIONS = [
 
 export default function App() {
   // --- Auth State ---
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(() => {
+    const saved = localStorage.getItem('paarakhmetric_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return null;
+  });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('paarakhmetric_token'));
   const [loginUsername, setLoginUsername] = useState<string>('officer_shrey');
   const [loginPassword, setLoginPassword] = useState<string>('password123');
@@ -136,7 +142,16 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
   // --- Data ---
-  const [inspections, setInspections] = useState<any[]>(INITIAL_INSPECTIONS);
+  const [inspections, setInspections] = useState<any[]>(() => {
+    const saved = localStorage.getItem('paarakhmetric_inspections');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return INITIAL_INSPECTIONS;
+  });
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
 
   // --- Search & Filter ---
@@ -250,10 +265,27 @@ export default function App() {
     });
   };
 
+  // User persistence
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('paarakhmetric_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('paarakhmetric_user');
+    }
+  }, [user]);
+
+  // Inspections persistence
+  useEffect(() => {
+    if (inspections && inspections.length > 0) {
+      localStorage.setItem('paarakhmetric_inspections', JSON.stringify(inspections));
+    }
+  }, [inspections]);
+
   const handleLogout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('paarakhmetric_token');
+    localStorage.removeItem('paarakhmetric_user');
   };
 
   // ============================================================
