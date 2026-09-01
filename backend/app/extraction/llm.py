@@ -107,3 +107,67 @@ Return JSON ONLY with this schema:
         "error": f"Failed to execute Vision AI: {last_err}",
         "success": False
     }
+
+
+def parse_with_llm(ocr_text: str, avg_ocr_confidence: float) -> Dict[str, Any]:
+    """
+    Parses single OCR text tokens using Gemini LLM if API key is set.
+    """
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return {}
+
+    prompt = f"""You are an AI Legal Metrology Compliance Inspector.
+Extract the statutory declarations from this raw OCR text:
+{ocr_text}
+
+Return JSON with keys: mrp, net_quantity, packing_date, best_before, manufacturer, country_of_origin, generic_name, unit_sale_price, dimensions, consumer_care.
+Each field should have: value (string), status ('FOUND' | 'MISSING' | 'UNREADABLE'), original_text (string)."""
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"response_mime_type": "application/json", "temperature": 0.1}
+        }
+        req_data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                parsed = json.loads(raw_text)
+                results = {}
+                for field in ["mrp", "net_quantity", "packing_date", "best_before", "manufacturer", 
+                              "country_of_origin", "generic_name", "unit_sale_price", "dimensions", "consumer_care"]:
+                    item = parsed.get(field, {})
+                    status = item.get("status", "MISSING")
+                    conf = 0.95 if status == "FOUND" else (0.50 if status == "UNREADABLE" else 0.0)
+                    results[field] = {
+                        "value": item.get("value") or "",
+                        "confidence": conf,
+                        "original_text": item.get("original_text") or ""
+                    }
+                return results
+    except Exception as e:
+        print(f"parse_with_llm error: {e}")
+    return {}
+
+
+def parse_with_vision_llm(image_path: str, fallback_ocr_text: str = "") -> Dict[str, Any]:
+    """
+    Vision LLM extraction helper for single image paths.
+    """
+    if not os.path.exists(image_path):
+        return {}
+    try:
+        with open(image_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("utf-8")
+        res = analyze_multimodal_package_images([b64])
+        if res.get("success"):
+            decls = {d["field_name"]: {"value": d["value"], "confidence": d["confidence"], "original_text": d.get("original_text", "")} for d in res.get("declarations", [])}
+            return decls
+    except Exception as e:
+        print(f"parse_with_vision_llm error: {e}")
+    return {}
+
