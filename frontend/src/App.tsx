@@ -749,6 +749,8 @@ export default function App() {
             filterOption={dashboardFilter}
             setFilterOption={setDashboardFilter}
             onSearchClick={() => setCurrentPage('history')}
+            onStartScan={() => { startCamera(); setCurrentPage('scan'); }}
+            onBatchUploadClick={() => batchFileInputRef.current?.click()}
             language={language}
           />
         )}

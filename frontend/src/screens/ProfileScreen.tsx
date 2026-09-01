@@ -120,11 +120,16 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
   }
 
   if (view === 'language') {
-    const langOptions = [
-      { id: 'en' as Language, symbol: 'A', label: 'English', desc: 'Default system interface' },
-      { id: 'hi' as Language, symbol: 'अ', label: 'हिन्दी (Hindi)', desc: 'कानूनी माप विज्ञान एवं अनुपालन' },
-      { id: 'kn' as Language, symbol: 'ಅ', label: 'ಕನ್ನಡ (Kannada)', desc: 'ಕಾನೂನು ಮಾಪನಶಾಸ್ತ್ರ ಅನುಸರಣೆ' },
+    const langOptions: Array<{ id: Language; symbol: string; label: string; desc: string }> = [
+      { id: 'en', symbol: 'A', label: 'English', desc: 'Default system interface' },
+      { id: 'hi', symbol: 'अ', label: 'हिन्दी (Hindi)', desc: 'विधिक मापविज्ञान एवं अनुपालन' },
+      { id: 'kn', symbol: 'ಅ', label: 'ಕನ್ನಡ (Kannada)', desc: 'ಕಾನೂನು ಮಾಪನಶಾಸ್ತ್ರ ಅನುಸರಣೆ' },
+      { id: 'ta', symbol: 'அ', label: 'தமிழ் (Tamil)', desc: 'சட்ட எடையியல் அமலாக்கம்' },
+      { id: 'te', symbol: 'అ', label: 'తెలుగు (Telugu)', desc: 'లీగల్ మెట్రాలజీ ప్యాకేజింగ్ నిబంధనలు' },
+      { id: 'mr', symbol: 'म', label: 'मराठी (Marathi)', desc: 'कायदेशीर वजन व मापे अनुपालन' },
+      { id: 'bn', symbol: 'অ', label: 'বাংলা (Bengali)', desc: 'আইনগত পরিমাপবিদ্যা প্রয়োগ' },
     ];
+
 
     return (
       <div className="flex flex-col gap-6">

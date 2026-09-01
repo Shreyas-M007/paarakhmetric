@@ -13,9 +13,10 @@ export default function TabBar({ currentPage, onPageChange, language = 'en' }: T
   const tabs = [
     { id: 'dashboard', label: t.dashboard || 'Dashboard', Icon: LayoutGrid },
     { id: 'history', label: t.inspectionHistory || 'Inspections', Icon: List },
-    { id: 'reports', label: language === 'hi' ? 'रिपोर्ट्स' : language === 'kn' ? 'ವರದಿಗಳು' : 'Reports', Icon: BarChart },
-    { id: 'profile', label: language === 'hi' ? 'प्रोफ़ाइल' : language === 'kn' ? 'ಪ್ರೊಫೈಲ್' : 'Profile', Icon: User },
+    { id: 'reports', label: t.reports || 'Reports', Icon: BarChart },
+    { id: 'profile', label: t.profile || 'Profile', Icon: User },
   ];
+
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around pt-3 px-4 bg-canvas/90 backdrop-blur-xl border-t border-divider"
