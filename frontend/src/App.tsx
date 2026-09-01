@@ -18,7 +18,30 @@ import InspectionDetailScreen from './screens/InspectionDetailScreen';
 
 export const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '' : 'https://paarakhmetric-api.onrender.com');
 
+// Resilient API caller that handles both root routes and /api prefix
+export async function apiCall(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  // Try direct path first (e.g. /products, /inspections, /auth/login)
+  try {
+    const res = await fetch(`${API_BASE_URL}${clean}`, options);
+    if (res.ok || (res.status !== 404 && res.status !== 405)) {
+      return res;
+    }
+  } catch {}
+
+  // Fallback: try with /api prefix (e.g. /api/products)
+  try {
+    const apiPrefixed = clean.startsWith('/api') ? clean : `/api${clean}`;
+    return await fetch(`${API_BASE_URL}${apiPrefixed}`, options);
+  } catch {
+    // Final fallback
+    return await fetch(`${API_BASE_URL}${clean}`, options);
+  }
+}
+
 type Page = 'dashboard' | 'scan' | 'history' | 'inspection' | 'settings' | 'reports' | 'profile';
+
 
 const INITIAL_INSPECTIONS = [
   {
@@ -250,7 +273,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await apiCall('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUsername, password: cleanPassword, role: 'officer' })
@@ -313,7 +336,7 @@ export default function App() {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE_URL}/api/inspections/search?${params.toString()}`, { headers });
+      const res = await apiCall(`/inspections/search?${params.toString()}`, { headers });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -329,7 +352,7 @@ export default function App() {
     try {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      await fetch(`${API_BASE_URL}/api/inspections/${id}`, { method: 'DELETE', headers });
+      await apiCall(`/inspections/${id}`, { method: 'DELETE', headers });
       setInspections(prev => prev.filter(i => i.id !== id));
       if (selectedInspectionId === id) {
         setSelectedInspectionId(null);
@@ -356,14 +379,14 @@ export default function App() {
     const item = queue[index];
 
     try {
-      const prodRes = await fetch(`${API_BASE_URL}/api/products`, {
+      const prodRes = await apiCall('/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: item.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "), category: "General" })
       });
       const prodData = await prodRes.json();
 
-      const inspRes = await fetch(`${API_BASE_URL}/api/inspections`, {
+      const inspRes = await apiCall('/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: prodData.id, location: "Batch Ingestion Depot", notes: `Batch file: ${item.name}` })
@@ -374,7 +397,7 @@ export default function App() {
       formData.append('panel_side', 'front');
       formData.append('file', item.file);
 
-      const upRes = await fetch(`${API_BASE_URL}/api/inspections/${inspData.id}/upload-image`, {
+      const upRes = await apiCall(`/inspections/${inspData.id}/upload-image`, {
         method: 'POST', body: formData
       });
       const analysisData = await upRes.json();
@@ -493,19 +516,25 @@ export default function App() {
 
       setProcessingStep("Registering Inspection...");
       // 1. Create Product
-      const prodRes = await fetch(`${API_BASE_URL}/api/products`, {
+      const prodRes = await apiCall('/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: "Live Scanned Commodity", category: "General" })
       });
+      if (!prodRes.ok) {
+        throw new Error(`Product creation failed: ${prodRes.statusText || prodRes.status}`);
+      }
       const prodData = await prodRes.json();
 
       // 2. Create Inspection
-      const inspRes = await fetch(`${API_BASE_URL}/api/inspections`, {
+      const inspRes = await apiCall('/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: prodData.id, location: "Mobile Scanner", notes: "Live scan via frontend" })
       });
+      if (!inspRes.ok) {
+        throw new Error(`Inspection registration failed: ${inspRes.statusText || inspRes.status}`);
+      }
       const inspData = await inspRes.json();
 
       setProcessingStep("Executing YOLO-Seg & Vision LLM...");
@@ -515,13 +544,14 @@ export default function App() {
       formData.append('panel_side', activeSide);
       formData.append('file', file);
       
-      const upRes = await fetch(`${API_BASE_URL}/api/inspections/${inspData.id}/upload-image`, {
+      const upRes = await apiCall(`/inspections/${inspData.id}/upload-image`, {
         method: 'POST',
         body: formData
       });
       
       if (!upRes.ok) {
-        throw new Error(`Upload failed: ${upRes.statusText}`);
+        const errorDetail = await upRes.text().catch(() => '');
+        throw new Error(`Upload analysis failed (${upRes.status}): ${errorDetail || upRes.statusText}`);
       }
       
       const analysisData = await upRes.json();
@@ -569,6 +599,7 @@ export default function App() {
       setIsProcessing(false);
     }
   };
+
 
   // ============================================================
   //  MANUAL OVERRIDE
