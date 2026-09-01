@@ -1,12 +1,15 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, APIRouter
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
+from pydantic import BaseModel
 from rapidfuzz import fuzz
 import os
 import shutil
+
 
 from app.database import init_db, get_db, SessionLocal, User, Product, Inspection, ProductImage, Declaration, ComplianceResult, OCRResult, StatutoryRule, sync_inspection_fts
 from app.schemas import UserResponse, UserCreate, ProductResponse, ProductCreate, InspectionResponse, InspectionCreate
@@ -647,7 +650,6 @@ def get_rules(db: Session = Depends(get_db)):
 
 
 # Automatically mirror all API routes under the /api prefix for frontend compatibility
-from fastapi import APIRouter
 api_router = APIRouter(prefix="/api")
 for r in list(app.routes):
     if hasattr(r, "endpoint") and not r.path.startswith("/api"):
@@ -667,12 +669,11 @@ app.include_router(api_router)
 if os.path.exists(UPLOAD_DIR):
     app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-
 # Serve frontend build if present
-from fastapi.staticfiles import StaticFiles
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../frontend/dist"))
 if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+
 
 
 
