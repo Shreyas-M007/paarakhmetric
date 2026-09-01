@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ShieldCheck, Camera, UploadCloud, BookOpen, Globe, ChevronDown } from 'lucide-react';
+import { Search, ShieldCheck, Camera, UploadCloud, BookOpen } from 'lucide-react';
 import StatGrid from '../components/StatGrid';
 import FilterBar from '../components/FilterBar';
 import InspectionList, { Inspection } from '../components/InspectionList';
@@ -20,26 +20,6 @@ interface DashboardScreenProps {
   setLanguage?: (lang: Language) => void;
 }
 
-const languages: Array<{ code: Language; symbol: string; label: string; sub: string }> = [
-  { code: 'en', symbol: 'A', label: 'English', sub: 'English' },
-  { code: 'hi', symbol: 'अ', label: 'हिन्दी', sub: 'Hindi' },
-  { code: 'kn', symbol: 'ಅ', label: 'ಕನ್ನಡ', sub: 'Kannada' },
-  { code: 'ta', symbol: 'அ', label: 'தமிழ்', sub: 'Tamil' },
-  { code: 'te', symbol: 'అ', label: 'తెలుగు', sub: 'Telugu' },
-  { code: 'mr', symbol: 'म', label: 'मराठी', sub: 'Marathi' },
-  { code: 'bn', symbol: 'অ', label: 'বাংলা', sub: 'Bengali' },
-];
-
-const langSymbolMap: Record<Language, string> = {
-  en: 'A',
-  hi: 'अ',
-  kn: 'ಅ',
-  ta: 'அ',
-  te: 'అ',
-  mr: 'म',
-  bn: 'অ'
-};
-
 export default function DashboardScreen({
   stats,
   inspections,
@@ -50,11 +30,10 @@ export default function DashboardScreen({
   onStartScan,
   onBatchUploadClick,
   language = 'en',
-  setLanguage
 }: DashboardScreenProps) {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const t = translations[language] || translations.en;
+
 
   const filterOptions = [
     { id: 'ALL', label: t.all || 'All' },
@@ -87,58 +66,9 @@ export default function DashboardScreen({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Dashboard Language Switcher Toggle */}
-          <div className="relative">
-            <button 
-              onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface border border-divider text-fg text-xs font-bold transition-all hover:bg-surface-elevated active:scale-95 shadow-sm"
-              title="Change Language / भाषा बदलें"
-            >
-              <Globe className="w-4 h-4 text-accent" />
-              <span className="w-5 h-5 rounded-md bg-accent text-on-accent flex items-center justify-center text-xs font-bold font-display">
-                {langSymbolMap[language] || 'A'}
-              </span>
-              <span className="hidden sm:inline text-xs font-semibold">{languages.find(l => l.code === language)?.label}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-fg-muted" />
-            </button>
-
-            {langDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-surface-elevated rounded-xl border border-divider py-1.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 max-h-80 overflow-y-auto">
-                <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-fg-muted tracking-wider border-b border-divider/50">
-                  Select Language / भाषा चुनें
-                </div>
-                {languages.map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => {
-                      if (setLanguage) setLanguage(lang.code);
-                      setLangDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors text-left ${
-                      language === lang.code ? 'bg-accent/15 text-accent font-bold' : 'text-fg-muted hover:bg-surface'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-md bg-surface border border-divider/40 flex items-center justify-center font-bold text-fg text-xs font-display">
-                        {lang.symbol}
-                      </span>
-                      <div>
-                        <div className="text-fg font-semibold">{lang.label}</div>
-                        <div className="text-[10px] text-fg-muted">{lang.sub}</div>
-                      </div>
-                    </div>
-                    {language === lang.code && (
-                      <span className="w-2 h-2 rounded-full bg-accent"></span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           <button 
             onClick={onSearchClick}
-            className="w-10 h-10 rounded-xl bg-surface border border-divider text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95"
+            className="w-10 h-10 rounded-xl bg-surface border border-divider text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 cursor-pointer"
             title={t.searchInspectionLog || "Search Inspections"}
           >
             <Search className="w-5 h-5" />
