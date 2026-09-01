@@ -6,6 +6,8 @@ import { Language, translations, getStatusTranslation, getDeclarationFieldTransl
 
 interface InspectionDetailScreenProps {
   inspection: any;
+  inspections?: any[];
+  onSelectInspection?: (id: number) => void;
   capturedImage: string | null;
   onBack: () => void;
   onManualOverride: (fieldName: string, newValue: string) => void;
@@ -13,7 +15,7 @@ interface InspectionDetailScreenProps {
 }
 
 export default function InspectionDetailScreen({
-  inspection, capturedImage, onBack, onManualOverride, language = 'en'
+  inspection, inspections = [], onSelectInspection, capturedImage, onBack, onManualOverride, language = 'en'
 }: InspectionDetailScreenProps) {
   const [inspectingSide, setInspectingSide] = useState('front');
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -27,6 +29,8 @@ export default function InspectionDetailScreen({
   const statusColor = inspection.status === 'COMPLIANT' ? 'text-success' :
     inspection.status === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning';
 
+  const currentIndex = inspections.findIndex(i => i.id === inspection.id);
+
   const handleSaveEdit = (fieldName: string) => {
     onManualOverride(fieldName, editValue);
     setEditingField(null);
@@ -39,23 +43,79 @@ export default function InspectionDetailScreen({
       <section className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <button onClick={onBack}
-            className="w-10 h-10 rounded-xl bg-surface border border-divider text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated active:scale-95 flex-shrink-0 cursor-pointer">
+            className="w-10 h-10 rounded-xl bg-surface border border-divider text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated active:scale-95 flex-shrink-0 cursor-pointer"
+            title="Back to Ledger"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex flex-col">
-            <h1 className="font-display text-[24px] sm:text-[28px] font-bold tracking-tight m-0 text-fg">
-              {language === 'hi' ? `निरीक्षण #${inspection.id}` : language === 'kn' ? `ತಪಾಸಣೆ #${inspection.id}` : `Inspection #${inspection.id}`}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-[22px] sm:text-[26px] font-bold tracking-tight m-0 text-fg">
+                {language === 'hi' ? `निरीक्षण #${inspection.id}` : language === 'kn' ? `ತಪಾಸಣೆ #${inspection.id}` : `Inspection #${inspection.id}`}
+              </h1>
+              
+              {/* Inspection Picker Dropdown */}
+              {inspections.length > 1 && onSelectInspection && (
+                <select
+                  value={inspection.id}
+                  onChange={(e) => onSelectInspection(Number(e.target.value))}
+                  className="bg-surface-elevated text-fg text-xs font-bold font-mono px-2 py-1 rounded-lg border border-divider outline-none cursor-pointer hover:border-accent"
+                >
+                  {inspections.map((item, idx) => (
+                    <option key={item.id} value={item.id}>
+                      #{item.id} · {item.product?.name || item.title || 'Item'} ({idx + 1}/{inspections.length})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             <span className="text-[13px] text-fg-muted truncate block">
               {inspection.product?.name || 'Packaged Item'} · {inspection.timestamp ? new Date(inspection.timestamp).toLocaleDateString() : 'Today'}
             </span>
           </div>
         </div>
 
-        <span className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-[0.02em] bg-transparent border border-divider ${statusColor} flex-shrink-0`}>
-          <span className="w-2 h-2 rounded-full bg-current" />{statusLabel}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Prev / Next Inspection Buttons */}
+          {inspections.length > 1 && onSelectInspection && (
+            <div className="flex items-center gap-1 bg-surface border border-divider rounded-xl p-1">
+              <button
+                onClick={() => {
+                  if (currentIndex > 0) {
+                    onSelectInspection(inspections[currentIndex - 1].id);
+                  }
+                }}
+                disabled={currentIndex <= 0}
+                className="px-2.5 py-1 text-xs font-bold rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="Previous Inspection"
+              >
+                ← {language === 'hi' ? 'पिछला' : language === 'kn' ? 'ಹಿಂದಿನ' : 'Prev'}
+              </button>
+              <span className="text-xs font-mono font-bold text-fg-muted px-1.5">
+                {Math.max(1, currentIndex + 1)} / {inspections.length}
+              </span>
+              <button
+                onClick={() => {
+                  if (currentIndex >= 0 && currentIndex < inspections.length - 1) {
+                    onSelectInspection(inspections[currentIndex + 1].id);
+                  }
+                }}
+                disabled={currentIndex < 0 || currentIndex >= inspections.length - 1}
+                className="px-2.5 py-1 text-xs font-bold rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="Next Inspection"
+              >
+                {language === 'hi' ? 'अगला' : language === 'kn' ? 'ಮುಂದಿನ' : 'Next'} →
+              </button>
+            </div>
+          )}
+
+          <span className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-[0.02em] bg-transparent border border-divider ${statusColor} flex-shrink-0`}>
+            <span className="w-2 h-2 rounded-full bg-current" />{statusLabel}
+          </span>
+        </div>
       </section>
+
 
       {/* Responsive Desktop Multi-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

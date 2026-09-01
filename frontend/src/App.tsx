@@ -724,11 +724,14 @@ export default function App() {
       <div className="min-h-screen bg-canvas px-5 pt-6 pb-8">
         <InspectionDetailScreen
           inspection={activeInspection}
+          inspections={inspections}
+          onSelectInspection={(id) => setSelectedInspectionId(id)}
           capturedImage={capturedImage}
           onBack={() => setCurrentPage('history')}
           onManualOverride={handleManualOverride}
           language={language}
         />
+
       </div>
     );
   }

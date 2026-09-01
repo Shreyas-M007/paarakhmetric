@@ -324,12 +324,65 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
         {/* Right Column: Single Inspection Generator & Report List (lg:col-span-5) */}
         <div className="lg:col-span-5 flex flex-col gap-5">
           {/* Single Inspection Report Export Card */}
-          <section className="bg-surface rounded-2xl p-6 flex flex-col gap-6 relative overflow-hidden border border-divider/60 shadow-sm">
+          <section className="bg-surface rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden border border-divider/60 shadow-sm">
+            {/* Record Selector and Prev / Next Navigator */}
+            <div className="flex items-center justify-between gap-2 border-b border-divider/60 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-bold">
+                  {language === 'hi' ? 'चयनित रिकॉर्ड' : language === 'kn' ? 'ಆಯ್ಕೆಮಾಡಿದ ತಪಾಸಣೆ' : 'Selected Record'}
+                </span>
+                <select 
+                  value={selectedId}
+                  onChange={(e) => setSelectedId(e.target.value)}
+                  className="bg-surface-elevated text-fg text-xs font-bold font-mono px-2 py-1 rounded-lg border border-divider outline-none cursor-pointer hover:border-accent"
+                >
+                  {inspections.map((item, idx) => (
+                    <option key={item.id} value={item.id}>
+                      #{item.id} · {item.title} ({idx + 1}/{inspections.length})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Prev / Next Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    const currentIndex = inspections.findIndex(i => i.id === selectedId);
+                    if (currentIndex > 0) {
+                      setSelectedId(inspections[currentIndex - 1].id);
+                    }
+                  }}
+                  disabled={inspections.findIndex(i => i.id === selectedId) <= 0}
+                  className="p-1.5 rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  title="Previous Inspection"
+                >
+                  ←
+                </button>
+                <span className="text-xs font-mono font-bold text-fg-muted px-1">
+                  {Math.max(1, inspections.findIndex(i => i.id === selectedId) + 1)} / {inspections.length}
+                </span>
+                <button
+                  onClick={() => {
+                    const currentIndex = inspections.findIndex(i => i.id === selectedId);
+                    if (currentIndex >= 0 && currentIndex < inspections.length - 1) {
+                      setSelectedId(inspections[currentIndex + 1].id);
+                    }
+                  }}
+                  disabled={inspections.findIndex(i => i.id === selectedId) >= inspections.length - 1}
+                  className="p-1.5 rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  title="Next Inspection"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
-              <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">
-                {language === 'hi' ? `निरीक्षण #${activeInspection.id}` : language === 'kn' ? `ತಪಾಸಣೆ #${activeInspection.id}` : `Selected Record #${activeInspection.id}`}
+              <span className="font-mono text-xs font-semibold text-accent">
+                #{activeInspection.id}
               </span>
-              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${
+              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${
                 activeInspection.status === 'COMPLIANT' ? 'text-success' : activeInspection.status === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning'
               }`}>
                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
@@ -338,30 +391,37 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
             </div>
 
             <div>
-              <div className="font-display text-[24px] font-bold text-fg">{activeInspection.title}</div>
-              <div className="text-[13px] whitespace-nowrap overflow-hidden text-ellipsis text-fg-muted">
+              <div className="font-display text-[22px] font-bold text-fg leading-tight">{activeInspection.title}</div>
+              <div className="text-[13px] whitespace-nowrap overflow-hidden text-ellipsis text-fg-muted mt-1">
                 {activeInspection.meta} · {t.officer} Shrey
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2.5">
               <button 
                 onClick={handleGeneratePdf}
-                className="flex-1 flex items-center justify-center gap-2 bg-accent text-on-accent rounded-full p-4 text-[15px] font-bold active:scale-95 transition-transform shadow-lg shadow-accent/20 cursor-pointer"
+                className="flex-1 flex items-center justify-center gap-2 bg-accent text-on-accent rounded-xl p-3.5 text-[14px] font-bold active:scale-95 transition-transform shadow-lg shadow-accent/20 cursor-pointer"
               >
-                <Download className="w-5 h-5" />
+                <Download className="w-4 h-4" />
                 {t.downloadPdf}
               </button>
               <button 
+                onClick={() => onRowClick(activeInspection.id)}
+                className="px-4 bg-surface-elevated hover:bg-surface border border-divider text-fg rounded-xl text-xs font-bold active:scale-95 transition-transform cursor-pointer"
+                title="View Full Inspection Details"
+              >
+                {language === 'hi' ? 'विवरण' : language === 'kn' ? 'ವಿವರ' : 'Details'}
+              </button>
+              <button 
                 onClick={handleShare}
-                className="w-14 flex-shrink-0 flex items-center justify-center bg-surface-elevated text-fg rounded-full active:scale-95 transition-transform hover:text-accent border border-divider"
+                className="w-12 flex-shrink-0 flex items-center justify-center bg-surface-elevated text-fg rounded-xl active:scale-95 transition-transform hover:text-accent border border-divider"
                 title="Share Report"
               >
-                <Share2 className="w-5 h-5" />
+                <Share2 className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="text-[12px] text-fg-muted text-center">
+            <div className="text-[11px] text-fg-muted text-center">
               {t.reportPrintAvailable} · {activeInspection.timeInfo || 'Today'}
             </div>
           </section>
@@ -373,7 +433,6 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
               inspections={inspections.map(i => ({...i, iconType: 'FileText'}))} 
               onRowClick={(id) => {
                 setSelectedId(id);
-                onRowClick(id);
               }} 
               language={language}
             />
@@ -381,6 +440,7 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
         </div>
       </div>
     </div>
+
 
   );
 }
