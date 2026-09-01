@@ -1,4 +1,5 @@
 // Transforms backend inspection objects into the shape expected by InspectionList component
+import { Language, getCategoryTranslation } from '../i18n';
 
 export interface MappedInspection {
   id: string;
@@ -18,40 +19,77 @@ const categoryIconMap: Record<string, string> = {
   'Sweets': 'Candy',
 };
 
-function formatTimeAgo(timestamp: string): string {
+function formatTimeAgo(timestamp: string, lang: Language = 'en'): string {
   if (!timestamp) return '';
   const now = new Date();
   const then = new Date(timestamp);
   const diffMs = now.getTime() - then.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
+  
+  if (diffMins < 1) {
+    if (lang === 'hi') return 'अभी';
+    if (lang === 'kn') return 'ಈಗಷ್ಟೇ';
+    if (lang === 'ta') return 'இப்போது';
+    if (lang === 'te') return 'ఇప్పుడే';
+    if (lang === 'mr') return 'आत्ताच';
+    if (lang === 'bn') return 'এইমাত্র';
+    return 'just now';
+  }
+  
+  if (diffMins < 60) {
+    if (lang === 'hi') return `${diffMins} मि पहले`;
+    if (lang === 'kn') return `${diffMins}ನಿ ಹಿಂದೆ`;
+    if (lang === 'ta') return `${diffMins}நி முன்`;
+    if (lang === 'te') return `${diffMins}ని క్రితం`;
+    if (lang === 'mr') return `${diffMins} मि पूर्वी`;
+    if (lang === 'bn') return `${diffMins} মিনিট আগে`;
+    return `${diffMins}m ago`;
+  }
+  
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) {
+    if (lang === 'hi') return `${diffHours} घंटे पहले`;
+    if (lang === 'kn') return `${diffHours} ಗಂ ಹಿಂದೆ`;
+    if (lang === 'ta') return `${diffHours} மணி முன்`;
+    if (lang === 'te') return `${diffHours} గం క్రితం`;
+    if (lang === 'mr') return `${diffHours} तास पूर्वी`;
+    if (lang === 'bn') return `${diffHours} ঘণ্টা আগে`;
+    return `${diffHours}h ago`;
+  }
+  
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 7) {
+    if (lang === 'hi') return `${diffDays} दिन पहले`;
+    if (lang === 'kn') return `${diffDays} ದಿನಗಳ ಹಿಂದೆ`;
+    if (lang === 'ta') return `${diffDays} நாட்கள் முன்`;
+    if (lang === 'te') return `${diffDays} రోజులు క్రితం`;
+    if (lang === 'mr') return `${diffDays} दिवस पूर्वी`;
+    if (lang === 'bn') return `${diffDays} দিন আগে`;
+    return `${diffDays}d ago`;
+  }
+  
   return then.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 }
 
 function normalizeStatus(status: string): 'COMPLIANT' | 'NON_COMPLIANT' | 'REVIEW' {
   if (status === 'COMPLIANT') return 'COMPLIANT';
   if (status === 'NON_COMPLIANT') return 'NON_COMPLIANT';
-  // REQUIRES_REVIEW, REVIEW, or anything else → REVIEW
   return 'REVIEW';
 }
 
-export function mapBackendInspection(raw: any): MappedInspection {
+export function mapBackendInspection(raw: any, lang: Language = 'en'): MappedInspection {
   const productName = raw.product?.name || raw.product_name || 'Unnamed Product';
   const category = raw.product?.category || raw.category || 'General';
   const location = raw.location || '';
-  const meta = [category, location].filter(Boolean).join(' · ');
+  const translatedCat = getCategoryTranslation(category, lang);
+  const meta = [translatedCat, location].filter(Boolean).join(' · ');
 
   return {
     id: String(raw.id),
     title: productName,
     meta,
     status: normalizeStatus(raw.status),
-    timeInfo: formatTimeAgo(raw.timestamp),
+    timeInfo: formatTimeAgo(raw.timestamp, lang),
     iconType: categoryIconMap[category] || undefined,
   };
 }
@@ -59,6 +97,6 @@ export function mapBackendInspection(raw: any): MappedInspection {
 export function computeRuleTally(complianceResults: any[]): { failed: number; total: number } {
   if (!complianceResults || complianceResults.length === 0) return { failed: 0, total: 0 };
   const total = complianceResults.length;
-  const failed = complianceResults.filter((r: any) => r.status === 'FAIL').length;
+  const failed = complianceResults.filter((r: any) => r.status === 'FAIL' || r.status === 'NON_COMPLIANT').length;
   return { failed, total };
 }

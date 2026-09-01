@@ -28,13 +28,14 @@ export default function ScanScreen({
   const t = translations[language] || translations.en;
 
   const panels = [
-    { name: 'front', label: t.frontPanelPdp || 'Front (PDP)' },
-    { name: 'back', label: t.backLabel || 'Back Panel' },
-    { name: 'left', label: language === 'hi' ? 'बायां भाग' : language === 'kn' ? 'ಎಡಭಾಗ' : 'Left Side' },
-    { name: 'right', label: language === 'hi' ? 'दायां भाग' : language === 'kn' ? 'ಬಲಭಾಗ' : 'Right Side' },
-    { name: 'top', label: language === 'hi' ? 'ऊपरी दृश्य' : language === 'kn' ? 'ಮೇಲ್ಭಾಗ' : 'Top View' },
-    { name: 'bottom', label: language === 'hi' ? 'निचला दृश्य' : language === 'kn' ? 'ಕೆಳಭಾಗ' : 'Bottom View' },
+    { name: 'front', label: t.frontPanelPdp },
+    { name: 'back', label: t.backLabel },
+    { name: 'left', label: t.leftSide },
+    { name: 'right', label: t.rightSide },
+    { name: 'top', label: t.topView },
+    { name: 'bottom', label: t.bottomView },
   ];
+
 
   return (
     <div className="flex flex-col gap-6 w-full">

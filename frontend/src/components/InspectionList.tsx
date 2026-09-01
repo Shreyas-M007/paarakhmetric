@@ -1,4 +1,5 @@
 import { Package, Droplet, Cookie, Milk, SprayCan, Candy } from 'lucide-react';
+import { Language, getStatusTranslation } from '../i18n';
 
 export interface Inspection {
   id: string;
@@ -14,6 +15,7 @@ interface InspectionListProps {
   inspections: Inspection[];
   onRowClick: (id: string) => void;
   gridMode?: boolean;
+  language?: Language;
 }
 
 const getIcon = (type?: string) => {
@@ -27,26 +29,28 @@ const getIcon = (type?: string) => {
   }
 };
 
-export default function InspectionList({ title = 'Recent inspections', inspections, onRowClick, gridMode = false }: InspectionListProps) {
+export default function InspectionList({ 
+  title = 'Recent inspections', 
+  inspections, 
+  onRowClick, 
+  gridMode = false,
+  language = 'en'
+}: InspectionListProps) {
   return (
     <section className="flex flex-col w-full">
       {title && <div className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-bold mb-3">{title}</div>}
       <div className={gridMode ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "flex flex-col"}>
         {inspections.map(insp => {
-          let statText = 'Review';
           let badgeBorder = 'border-divider';
+          const statText = getStatusTranslation(insp.status, language);
           
           if (insp.status === 'COMPLIANT') {
-            statText = 'Pass';
             badgeBorder = 'border-success/30 bg-success/10 text-success';
           } else if (insp.status === 'NON_COMPLIANT') {
-            statText = 'Fail';
             badgeBorder = 'border-error/30 bg-error/10 text-error';
-          } else if (insp.status === 'REVIEW') {
-            statText = 'Review';
+          } else {
             badgeBorder = 'border-warning/30 bg-warning/10 text-warning';
           }
-
 
           return (
             <button 

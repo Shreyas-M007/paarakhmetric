@@ -43,6 +43,10 @@ export interface Translations {
   frontPanelPdp: string;
   backLabel: string;
   sideViews: string;
+  leftSide: string;
+  rightSide: string;
+  topView: string;
+  bottomView: string;
   capturedPreview: string;
   imageQuality: string;
   sharpness: string;
@@ -107,6 +111,30 @@ export interface Translations {
   profile: string;
   rulesBrowser: string;
   unitCalculator: string;
+  sessionActive: string;
+  fieldOfficer: string;
+  assignedRegion: string;
+  appVersionLabel: string;
+  accountOperations: string;
+  editProfileDetails: string;
+  editProfileSub: string;
+  rolePermissions: string;
+  rolePermissionsSub: string;
+  contactSupport: string;
+  contactSupportSub: string;
+  rulesFlaggedOf: string;
+  mrpMissingDigits: string;
+  reportPrintAvailable: string;
+  ruleVerdicts: string;
+  retailSalePrice: string;
+  packingDate: string;
+  preflightQuality: string;
+  clearConfidence: string;
+  lowGlare: string;
+  directAngle: string;
+  todaySweep: string;
+  recentAudits: string;
+  selectedRecord: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -150,9 +178,13 @@ export const translations: Record<Language, Translations> = {
     activePanel: "Active Packaging Panel",
     cameraInactive: "Camera Inactive",
     cameraInactiveSub: "Click start camera or choose an image file from storage",
-    frontPanelPdp: "Front Panel (PDP)",
-    backLabel: "Back Label",
+    frontPanelPdp: "Front (PDP)",
+    backLabel: "Back Panel",
     sideViews: "Side Views",
+    leftSide: "Left Side",
+    rightSide: "Right Side",
+    topView: "Top View",
+    bottomView: "Bottom View",
     capturedPreview: "Captured Preview",
     imageQuality: "Image Quality Verification",
     sharpness: "Sharpness",
@@ -199,9 +231,9 @@ export const translations: Record<Language, Translations> = {
     manufacturerDecl: "Manufacturer & Packer Address",
     statutoryRequirement: "Statutory Rule Requirement",
     verdict: "Verdict",
-    pass: "PASS",
-    fail: "FAIL",
-    reviewStatus: "REVIEW",
+    pass: "Pass",
+    fail: "Fail",
+    reviewStatus: "Review",
     saveVerification: "Confirm Officer Signoff",
     settingsTitle: "Officer Profile & Settings",
     settingsSubtitle: "Configure enforcement locale, theme and preferences",
@@ -216,7 +248,31 @@ export const translations: Record<Language, Translations> = {
     reports: "Reports",
     profile: "Profile",
     rulesBrowser: "LMPC Rules Explorer",
-    unitCalculator: "Net Qty Pack Size Calculator"
+    unitCalculator: "Net Qty Pack Size Calculator",
+    sessionActive: "Session Active",
+    fieldOfficer: "Field Officer · ID OF-2291",
+    assignedRegion: "Assigned Region",
+    appVersionLabel: "App Version",
+    accountOperations: "Account & Operations",
+    editProfileDetails: "Edit Profile Details",
+    editProfileSub: "Name, contact, assigned district",
+    rolePermissions: "Role & Permissions",
+    rolePermissionsSub: "Field Officer · L2 inspection rights",
+    contactSupport: "Contact Support Desk",
+    contactSupportSub: "Compliance desk · Mon–Sat, 9am–6pm",
+    rulesFlaggedOf: "rules flagged non-compliant",
+    mrpMissingDigits: "MRP digits unverified or missing · Unit non-standard",
+    reportPrintAvailable: "Report available for print or instant dispatch",
+    ruleVerdicts: "Statutory Rule Verdicts",
+    retailSalePrice: "Retail Sale Price (MRP)",
+    packingDate: "Month & Year of Packing",
+    preflightQuality: "Vision Quality Verification",
+    clearConfidence: "Sharpness Clear",
+    lowGlare: "Low Glare",
+    directAngle: "Direct Angle",
+    todaySweep: "Today's Audit Sweep",
+    recentAudits: "Recent Inspections",
+    selectedRecord: "Selected Inspection"
   },
 
   hi: {
@@ -262,6 +318,10 @@ export const translations: Record<Language, Translations> = {
     frontPanelPdp: "मुख्य पैनल (PDP)",
     backLabel: "पिछला लेबल",
     sideViews: "पार्श्व दृश्य",
+    leftSide: "बायां भाग",
+    rightSide: "दायां भाग",
+    topView: "ऊपरी दृश्य",
+    bottomView: "निचला दृश्य",
     capturedPreview: "कैप्चर पूर्वावलोकन",
     imageQuality: "छवि गुणवत्ता सत्यापन",
     sharpness: "स्पष्टता",
@@ -308,9 +368,9 @@ export const translations: Record<Language, Translations> = {
     manufacturerDecl: "निर्माता का पूरा पता",
     statutoryRequirement: "वैधानिक नियम आवश्यकता",
     verdict: "निर्णय",
-    pass: "उत्तीर्ण (PASS)",
-    fail: "विफल (FAIL)",
-    reviewStatus: "समीक्षा (REVIEW)",
+    pass: "उत्तीर्ण (Pass)",
+    fail: "विफल (Fail)",
+    reviewStatus: "समीक्षा (Review)",
     saveVerification: "सत्यापन सहेजें",
     settingsTitle: "अधिकारी प्रोफ़ाइल और सेटिंग्स",
     settingsSubtitle: "भाषा, थीम और प्राथमिकताएं कॉन्फ़िगर करें",
@@ -325,7 +385,31 @@ export const translations: Record<Language, Translations> = {
     reports: "रिपोर्ट",
     profile: "प्रोफ़ाइल",
     rulesBrowser: "नियम पुस्तिका",
-    unitCalculator: "मानक मात्रा कैलकुलेटर"
+    unitCalculator: "मानक मात्रा कैलकुलेटर",
+    sessionActive: "सत्र सक्रिय",
+    fieldOfficer: "क्षेत्र अधिकारी · आईडी OF-2291",
+    assignedRegion: "आवंटित क्षेत्र",
+    appVersionLabel: "ऐप संस्करण",
+    accountOperations: "खाता और संचालन",
+    editProfileDetails: "प्रोफ़ाइल विवरण संपादित करें",
+    editProfileSub: "नाम, संपर्क, आवंटित जिला",
+    rolePermissions: "भूमिका और अनुमतियाँ",
+    rolePermissionsSub: "क्षेत्र अधिकारी · L2 निरीक्षण अधिकार",
+    contactSupport: "समर्थन डेस्क से संपर्क करें",
+    contactSupportSub: "हेल्पलाइन · सोम-शनि, 9am–6pm",
+    rulesFlaggedOf: "नियमों का उल्लंघन ध्वजांकित",
+    mrpMissingDigits: "MRP अंक गायब हैं या अमान्य इकाई",
+    reportPrintAvailable: "रिपोर्ट प्रिंट या प्रेषण के लिए तैयार",
+    ruleVerdicts: "वैधानिक नियम निर्णय",
+    retailSalePrice: "खुदरा बिक्री मूल्य (MRP)",
+    packingDate: "पैकिंग का महीना और वर्ष",
+    preflightQuality: "छवि गुणवत्ता सत्यापन",
+    clearConfidence: "स्पष्टता 96%",
+    lowGlare: "कम चमक",
+    directAngle: "सीधा कोण",
+    todaySweep: "आज का ऑडिट स्वीप",
+    recentAudits: "हालिया निरीक्षण",
+    selectedRecord: "चयनित निरीक्षण"
   },
 
   kn: {
@@ -371,6 +455,10 @@ export const translations: Record<Language, Translations> = {
     frontPanelPdp: "ಮುಂಭಾಗದ ಫಲಕ (PDP)",
     backLabel: "ಹಿಂದಿನ ಲೇಬಲ್",
     sideViews: "ಪಾರ್ಶ್ವ ವೀಕ್ಷಣೆಗಳು",
+    leftSide: "ಎಡಭಾಗ",
+    rightSide: "ಬಲಭಾಗ",
+    topView: "ಮೇಲ್ಭಾಗ",
+    bottomView: "ಕೆಳಭಾಗ",
     capturedPreview: "ಸೆರೆಹಿಡಿದ ಮುನ್ನೋಟ",
     imageQuality: "ಚಿತ್ರ ಗುಣಮಟ್ಟ ಪರಿಶೀಲನೆ",
     sharpness: "ತೀಕ್ಷ್ಣತೆ",
@@ -417,9 +505,9 @@ export const translations: Record<Language, Translations> = {
     manufacturerDecl: "ತಯಾರಕರ ಪೂರ್ಣ ವಿಳಾಸ",
     statutoryRequirement: "ಶಾಸನಬದ್ಧ ನಿಯಮದ ಅವಶ್ಯಕತೆ",
     verdict: "ತೀರ್ಪು",
-    pass: "ಉತ್ತೀರ್ಣ (PASS)",
-    fail: "ವಿಫಲ (FAIL)",
-    reviewStatus: "ಪರಿಶೀಲನೆ (REVIEW)",
+    pass: "ಉತ್ತೀರ್ಣ (Pass)",
+    fail: "ವಿಫಲ (Fail)",
+    reviewStatus: "ಪರಿಶೀಲನೆ (Review)",
     saveVerification: "ದೃಢೀಕರಣವನ್ನು ಉಳಿಸಿ",
     settingsTitle: "ಅಧಿಕಾರಿ ಪ್ರೊಫೈಲ್ ಮತ್ತು ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
     settingsSubtitle: "ಭಾಷೆ, ಥೀಮ್ ಮತ್ತು ಆದ್ಯತೆಗಳನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ",
@@ -434,7 +522,31 @@ export const translations: Record<Language, Translations> = {
     reports: "ವರದಿಗಳು",
     profile: "ಪ್ರೊಫೈಲ್",
     rulesBrowser: "ನಿಯಮಗಳ ಪುಸ್ತಕ",
-    unitCalculator: "ಪ್ರಮಾಣಿತ ತೂಕ ಕ್ಯಾಲ್ಕುಲೇಟರ್"
+    unitCalculator: "ಪ್ರಮಾಣಿತ ತೂಕ ಕ್ಯಾಲ್ಕುಲೇಟರ್",
+    sessionActive: "ಅಧಿವೇಶನ ಸಕ್ರಿಯವಾಗಿದೆ",
+    fieldOfficer: "ಕ್ಷೇತ್ರ ಅಧಿಕಾರಿ · ಐಡಿ OF-2291",
+    assignedRegion: "ನಿಯೋಜಿತ ಪ್ರದೇಶ",
+    appVersionLabel: "ಅಪ್ಲಿಕೇಶನ್ ಆವೃತ್ತಿ",
+    accountOperations: "ಖಾತೆ ಮತ್ತು ಕಾರ್ಯಾಚರಣೆಗಳು",
+    editProfileDetails: "ಪ್ರೊಫೈಲ್ ವಿವರಗಳನ್ನು ಸಂಪಾದಿಸಿ",
+    editProfileSub: "ಹೆಸರು, ಸಂಪರ್ಕ, ನಿಯೋಜಿತ ಜಿಲ್ಲೆ",
+    rolePermissions: "ಪಾತ್ರ ಮತ್ತು ಅನುಮತಿಗಳು",
+    rolePermissionsSub: "ಕ್ಷೇತ್ರ ಅಧಿಕಾರಿ · L2 ಪರಿಶೀಲನಾ ಹಕ್ಕುಗಳು",
+    contactSupport: "ಸಹಾಯವಾಣಿ ಸಂಪರ್ಕಿಸಿ",
+    contactSupportSub: "ಕಂಪ್ಲೈಯನ್ಸ್ ಡೆಸ್ಕ್ · ಸೋಮ-ಶನಿ, 9am–6pm",
+    rulesFlaggedOf: "ನಿಯಮಗಳು ಉಲ್ಲಂಘಿಸಲಾಗಿದೆ",
+    mrpMissingDigits: "MRP ಅಂಕಿಗಳು ಕಾಣೆಯಾಗಿವೆ ಅಥವಾ ಅಪ್ರಮಾಣಿತ ಘಟಕ",
+    reportPrintAvailable: "ವರದಿಯು ಮುದ್ರಣಕ್ಕೆ ಲಭ್ಯವಿದೆ",
+    ruleVerdicts: "ಶಾಸನಬದ್ಧ ನಿಯಮದ ತೀರ್ಪುಗಳು",
+    retailSalePrice: "ಚಿಲ್ಲರೆ ಮಾರಾಟ ಬೆಲೆ (MRP)",
+    packingDate: "ಪ್ಯಾಕಿಂಗ್ ತಿಂಗಳು ಮತ್ತು ವರ್ಷ",
+    preflightQuality: "ಚಿತ್ರ ಗುಣಮಟ್ಟ ಪರಿಶೀಲನೆ",
+    clearConfidence: "ತೀಕ್ಷ್ಣತೆ 96%",
+    lowGlare: "ಕಡಿಮೆ ಪ್ರತಿಫಲನ",
+    directAngle: "ನೇರ ಕೋನ",
+    todaySweep: "ಇಂದಿನ ಆಡಿಟ್ ಸಾರಾಂಶ",
+    recentAudits: "ಇತ್ತೀಚಿನ ತಪಾಸಣೆಗಳು",
+    selectedRecord: "ಆಯ್ಕೆಮಾಡಿದ ತಪಾಸಣೆ"
   },
 
   ta: {
@@ -480,6 +592,10 @@ export const translations: Record<Language, Translations> = {
     frontPanelPdp: "முன் பேனல் (PDP)",
     backLabel: "பின்புற லேபிள்",
     sideViews: "பக்கக் காட்சிகள்",
+    leftSide: "இடது பக்கம்",
+    rightSide: "வலது பக்கம்",
+    topView: "மேல் காட்சி",
+    bottomView: "கீழ் காட்சி",
     capturedPreview: "பிடிக்கப்பட்ட முன்னோட்டம்",
     imageQuality: "படத் தர சரிபார்ப்பு",
     sharpness: "கூர்மை",
@@ -526,9 +642,9 @@ export const translations: Record<Language, Translations> = {
     manufacturerDecl: "உற்பத்தியாளரின் முழு முகவரி",
     statutoryRequirement: "சட்ட விதி தேவை",
     verdict: "தீர்ப்பு",
-    pass: "தேர்ச்சி (PASS)",
-    fail: "தோல்வி (FAIL)",
-    reviewStatus: "மறுபரிசீலனை (REVIEW)",
+    pass: "தேர்ச்சி (Pass)",
+    fail: "தோல்வி (Fail)",
+    reviewStatus: "மறுபரிசீலனை (Review)",
     saveVerification: "சரிபார்ப்பை சேமிக்கவும்",
     settingsTitle: "அதிகாரி சுயவிவரம் மற்றும் அமைப்புகள்",
     settingsSubtitle: "மொழி, தீம் மற்றும் விருப்பங்களை உள்ளமைக்கவும்",
@@ -543,7 +659,31 @@ export const translations: Record<Language, Translations> = {
     reports: "அறிக்கைகள்",
     profile: "சுயவிவரம்",
     rulesBrowser: "விதிகள் புத்தகம்",
-    unitCalculator: "நிலையான அளவு கால்குலேட்டர்"
+    unitCalculator: "நிலையான அளவு கால்குலேட்டர்",
+    sessionActive: "அமர்வு செயலில் உள்ளது",
+    fieldOfficer: "கள அதிகாரி · ஐடி OF-2291",
+    assignedRegion: "ஒதுக்கப்பட்ட பகுதி",
+    appVersionLabel: "பயன்பாட்டு பதிப்பு",
+    accountOperations: "கணக்கு மற்றும் செயல்பாடுகள்",
+    editProfileDetails: "சுயவிவர விவரங்களைத் திருத்து",
+    editProfileSub: "பெயர், தொடர்பு, மாவட்டம்",
+    rolePermissions: "பங்கு மற்றும் அனுமதிகள்",
+    rolePermissionsSub: "கள அதிகாரி · L2 ஆய்வு உரிமைகள்",
+    contactSupport: "ஆதரவு மையத்தைத் தொடர்பு கொள்ளவும்",
+    contactSupportSub: "உதவி மையம் · திங்கள்-சனி, 9am–6pm",
+    rulesFlaggedOf: "விதிகள் மீறப்பட்டுள்ளன",
+    mrpMissingDigits: "MRP எண்கள் விடுபட்டுள்ளன அல்லது தவறான அலகு",
+    reportPrintAvailable: "அறிக்கை அச்சிட தயாராக உள்ளது",
+    ruleVerdicts: "சட்ட விதி தீர்ப்புகள்",
+    retailSalePrice: "சில்லறை விற்பனை விலை (MRP)",
+    packingDate: "பேக்கிங் மாதம் மற்றும் ஆண்டு",
+    preflightQuality: "படத் தர சரிபார்ப்பு",
+    clearConfidence: "கூர்மை 96%",
+    lowGlare: "குறைந்த ஒளி பிரதிபலிப்பு",
+    directAngle: "நேரடி கோணம்",
+    todaySweep: "இன்றைய தணிக்கை சுருக்கம்",
+    recentAudits: "சமீபத்திய ஆய்வுகள்",
+    selectedRecord: "தேர்ந்தெடுக்கப்பட்ட ஆய்வு"
   },
 
   te: {
@@ -567,7 +707,7 @@ export const translations: Record<Language, Translations> = {
     searchInspectionLog: "తనిఖీలను వెతకండి...",
     totalScanned: "మొత్తం ఆడిట్ చేసినవి",
     compliant: "నిబంధనలు పాటించినవి",
-    violationsFound: "ఉల్లంఘనలు",
+    violationsFound: "ఉల్లంಘనలు",
     needsReview: "సమీక్ష అవసరం",
     frequentViolations: "చట్టబద్ధ నిబంధనల ఉల్లంఘనలు",
     batchUpload: "బల్క్ అప్‌లోడ్",
@@ -589,6 +729,10 @@ export const translations: Record<Language, Translations> = {
     frontPanelPdp: "ముందు ప్యానెల్ (PDP)",
     backLabel: "వెనుక లేబుల్",
     sideViews: "వైపు వీక్షణలు",
+    leftSide: "ఎడమ వైపు",
+    rightSide: "కుడి వైపు",
+    topView: "పై వీక్షణ",
+    bottomView: "క్రింది వీక్షణ",
     capturedPreview: "క్యాప్చర్ చేసిన మునుజూపు",
     imageQuality: "చిత్ర నాణ్యత ధృవీకరణ",
     sharpness: "స్పష్టత",
@@ -635,9 +779,9 @@ export const translations: Record<Language, Translations> = {
     manufacturerDecl: "తయారీదారు పూర్తి చిరునామా",
     statutoryRequirement: "చట్టబద్ధ నిబంధన అవసరం",
     verdict: "తీర్పు",
-    pass: "పాస్ (PASS)",
-    fail: "ఫెయిల్ (FAIL)",
-    reviewStatus: "సమీక్ష (REVIEW)",
+    pass: "పాస్ (Pass)",
+    fail: "ఫెయిల్ (Fail)",
+    reviewStatus: "సమీక్ష (Review)",
     saveVerification: "ధృవీకరణను సేవ్ చేయండి",
     settingsTitle: "అధికారి ప్రొఫైల్ మరియు సెట్టింగ్‌లు",
     settingsSubtitle: "భాష, థీమ్ మరియు ప్రాధాన్యతలను కాన్ఫిగర్ చేయండి",
@@ -652,7 +796,31 @@ export const translations: Record<Language, Translations> = {
     reports: "నివేదికలు",
     profile: "ప్రొఫైల్",
     rulesBrowser: "నిబంధనల పుస్తకం",
-    unitCalculator: "ప్రామాణిక కొలత కాలిక్యులేటర్"
+    unitCalculator: "ప్రామాణిక కొలత కాలిక్యులేటర్",
+    sessionActive: "సెషన్ యాక్టివ్‌గా ఉంది",
+    fieldOfficer: "క్షేత్ర అధికారి · ఐడీ OF-2291",
+    assignedRegion: "కేటాయించిన ప్రాంతం",
+    appVersionLabel: "యాప్ వెర్షన్",
+    accountOperations: "ఖాతా మరియు కార్యకలాపాలు",
+    editProfileDetails: "ప్రొఫైల్ వివరాలను సవరించండి",
+    editProfileSub: "పేరు, సంప్రదింపులు, జిల్లా",
+    rolePermissions: "పాత్ర మరియు అనుమతులు",
+    rolePermissionsSub: "క్షేత్ర అధికారి · L2 తనిఖీ హక్కులు",
+    contactSupport: "సహాయ కేంద్రాన్ని సంప్రదించండి",
+    contactSupportSub: "హెల్ప్‌లైన్ · సోమ-శని, 9am–6pm",
+    rulesFlaggedOf: "నిబంధనల ఉల్లంఘనలు గుర్తించబడ్డాయి",
+    mrpMissingDigits: "MRP అంకెలు లేవు లేదా చెల్లని కొలత",
+    reportPrintAvailable: "నివేదిక ప్రింట్ చేయడానికి సిద్ధంగా ఉంది",
+    ruleVerdicts: "చట్టబద్ధ నిబంధనల తీర్పులు",
+    retailSalePrice: "రిటైల్ అమ్మకపు ధర (MRP)",
+    packingDate: "ప్యాకింగ్ చేసిన నెల మరియు సంవత్సరం",
+    preflightQuality: "చిత్ర నాణ్యత ధృవీకరణ",
+    clearConfidence: "స్పష్టత 96%",
+    lowGlare: "తక్కువ మెరుపు",
+    directAngle: "నేరుగా కోణం",
+    todaySweep: "నేటి ఆడిట్ సారాంశం",
+    recentAudits: "ఇటీవలి తనిఖీలు",
+    selectedRecord: "ఎంచుకున్న తనిఖీ"
   },
 
   mr: {
@@ -698,6 +866,10 @@ export const translations: Record<Language, Translations> = {
     frontPanelPdp: "मुख्य पॅनेल (PDP)",
     backLabel: "मागील लेबल",
     sideViews: "बाजूचे दृश्य",
+    leftSide: "डावी बाजू",
+    rightSide: "उजवी बाजू",
+    topView: "वरचे दृश्य",
+    bottomView: "खालचे दृश्य",
     capturedPreview: "कॅप्चर पूर्वावलोकन",
     imageQuality: "प्रतिमा गुणवत्ता पडताळणी",
     sharpness: "स्पष्टता",
@@ -744,9 +916,9 @@ export const translations: Record<Language, Translations> = {
     manufacturerDecl: "उत्पादकाचा पूर्ण पत्ता",
     statutoryRequirement: "वैधानिक नियमांची आवश्यकता",
     verdict: "निर्णय",
-    pass: "उत्तीर्ण (PASS)",
-    fail: "अयशस्वी (FAIL)",
-    reviewStatus: "पुनरावलोकन (REVIEW)",
+    pass: "उत्तीर्ण (Pass)",
+    fail: "अयशस्वी (Fail)",
+    reviewStatus: "पुनरावलोकन (Review)",
     saveVerification: "पडताळणी जतन करा",
     settingsTitle: "अधिकारी प्रोफाइल आणि सेटिंग्ज",
     settingsSubtitle: "भाषा, थीम आणि प्राधान्ये कॉन्फिगर करा",
@@ -761,7 +933,31 @@ export const translations: Record<Language, Translations> = {
     reports: "अहवाल",
     profile: "प्रोफाइल",
     rulesBrowser: "नियम पुस्तिका",
-    unitCalculator: "प्रमाणित आकार कॅल्क्युलेटर"
+    unitCalculator: "प्रमाणित आकार कॅल्क्युलेटर",
+    sessionActive: "सत्र सक्रिय",
+    fieldOfficer: "क्षेत्र अधिकारी · आयडी OF-2291",
+    assignedRegion: "नियुक्त क्षेत्र",
+    appVersionLabel: "अ‍ॅप आवृत्ती",
+    accountOperations: "खाते आणि ऑपरेशन्स",
+    editProfileDetails: "प्रोफाइल तपशील संपादित करा",
+    editProfileSub: "नाव, संपर्क, नियुक्त जिल्हा",
+    rolePermissions: "भूमिका आणि परवानग्या",
+    rolePermissionsSub: "क्षेत्र अधिकारी · L2 तपासणी अधिकार",
+    contactSupport: "सपोर्ट डेस्कशी संपर्क साधा",
+    contactSupportSub: "हेल्पलाइन · सोम-शनि, 9am–6pm",
+    rulesFlaggedOf: "नियमांचे उल्लंघन ध्वजांकित",
+    mrpMissingDigits: "MRP आकडे गहाळ किंवा अमान्य एकक",
+    reportPrintAvailable: "अहवाल मुद्रणासाठी उपलब्ध",
+    ruleVerdicts: "वैधानिक नियम निर्णय",
+    retailSalePrice: "किरकोळ विक्री किंमत (MRP)",
+    packingDate: "पॅकिंगचा महिना आणि वर्ष",
+    preflightQuality: "प्रतिमा गुणवत्ता पडताळणी",
+    clearConfidence: "स्पष्टता 96%",
+    lowGlare: "कमी चमक",
+    directAngle: "थेट कोन",
+    todaySweep: "आजचा ऑडिट स्वीप",
+    recentAudits: "अलीकडील तपासणी",
+    selectedRecord: "निवडलेली तपासणी"
   },
 
   bn: {
@@ -807,6 +1003,10 @@ export const translations: Record<Language, Translations> = {
     frontPanelPdp: "সামনের প্যানেল (PDP)",
     backLabel: "পেছনের লেবেল",
     sideViews: "পাশের দৃশ্য",
+    leftSide: "বাম দিক",
+    rightSide: "ডান দিক",
+    topView: "উপরের দৃশ্য",
+    bottomView: "নিচের দৃশ্য",
     capturedPreview: "ক্যাপচার করা প্রিভিউ",
     imageQuality: "ছবির গুণমান যাচাইকরণ",
     sharpness: "তীক্ষ্ণতা",
@@ -822,7 +1022,7 @@ export const translations: Record<Language, Translations> = {
     allCategories: "সমস্ত পণ্যের ধরন",
     grain: "খাদ্যশস্য এবং ডাল",
     edibleOil: "ভোজ্য তেল ও চর্বি",
-    confectionery: "প্যাকেজড খাবার ও স্ন্যাকস",
+    confectionery: "প্যাকেজড খাবার ও স্ನ್ಯাকস",
     cosmetics: "প্রসাধন সামগ্রী",
     beverage: "পানীয় ও দুগ্ধজাত পণ্য",
     id: "পরিদর্শন আইডি",
@@ -853,15 +1053,15 @@ export const translations: Record<Language, Translations> = {
     manufacturerDecl: "প্রস্তুতকারকের সম্পূর্ণ ঠিকানা",
     statutoryRequirement: "সংবিধিবদ্ধ নিয়মের প্রয়োজনীয়তা",
     verdict: "রায়",
-    pass: "উত্তীর্ণ (PASS)",
-    fail: "ব্যর্থ (FAIL)",
-    reviewStatus: "পর্যালোচনা (REVIEW)",
+    pass: "উত্তীর্ণ (Pass)",
+    fail: "ব্যর্থ (Fail)",
+    reviewStatus: "পর্যালোচনা (Review)",
     saveVerification: "যাচাইকরণ সংরক্ষণ করুন",
     settingsTitle: "কর্মকর্তার প্রোফাইল ও সেটিংস",
     settingsSubtitle: "ভাষা, থিম এবং পছন্দসমূহ কনফিগার করুন",
     interfaceLang: "ইন্টারফেস ভাষা",
     interfaceLangDesc: "অ্যাপ ইন্টারফেসের জন্য ভাষা নির্বাচন করুন",
-    availableOcrLangs: "সমর্থিত ভাষা: ইংরেজি, হিন্দি, কন্নড়, তামিল, তেলেগু, মারাঠি, বাংলা",
+    availableOcrLangs: "সমর্থিত ভাষা: ইংরেজি, হিন্দি, কನ್ನড়, তামিল, তেলেগু, মারাঠি, বাংলা",
     appVersion: "পারখমেট্রিক সংস্করণ",
     pipelineVersion: "AI পাইপলাইন ইঞ্জিন",
     rulesetVersion: "প্রয়োগ নিয়মাবলী",
@@ -870,6 +1070,66 @@ export const translations: Record<Language, Translations> = {
     reports: "প্রতিবেদন",
     profile: "প্রোফাইল",
     rulesBrowser: "নিয়ম বই",
-    unitCalculator: "মানক মাপ ক্যালকুলেটর"
+    unitCalculator: "মানক মাপ ক্যালকুলেটর",
+    sessionActive: "সেশন সক্রিয়",
+    fieldOfficer: "ফিল্ড অফিসার · আইডি OF-2291",
+    assignedRegion: "নির্ধারিত অঞ্চল",
+    appVersionLabel: "অ্যাপ সংস্করণ",
+    accountOperations: "অ্যাকাউন্ট এবং অপারেশন",
+    editProfileDetails: "প্রোফাইল বিবরণ সম্পাদনা করুন",
+    editProfileSub: "নাম, যোগাযোগ, নির্ধারিত জেলা",
+    rolePermissions: "ভূমিকা এবং অনুমতি",
+    rolePermissionsSub: "ফিল্ড অফিসার · L2 পরিদর্শন অধিকার",
+    contactSupport: "সাপোর্ট ডেস্কে যোগাযোগ করুন",
+    contactSupportSub: "হেল্পলাইন · সোম-শনি, 9am–6pm",
+    rulesFlaggedOf: "নিয়ম লঙ্ঘন চিহ্নিত করা হয়েছে",
+    mrpMissingDigits: "MRP অঙ্ক অনুপস্থিত বা অমান্য একক",
+    reportPrintAvailable: "প্রতিবেদন মুদ্রণের জন্য প্রস্তুত",
+    ruleVerdicts: "সংবিধিবদ্ধ নিয়মের রায়",
+    retailSalePrice: "খুচরা বিক্রয় মূল্য (MRP)",
+    packingDate: "প্যাকিংয়ের মাস এবং বছর",
+    preflightQuality: "ছবির গুণমান যাচাইকরণ",
+    clearConfidence: "তীক্ষ্ণতা ৯৬%",
+    lowGlare: "কম আলো প্রতিফলন",
+    directAngle: "সরাসরি কোণ",
+    todaySweep: "আজকের অডিট সারাংশ",
+    recentAudits: "সাম্প্রতিক পরিদর্শন",
+    selectedRecord: "নির্বাচিত পরিদর্শন"
   }
 };
+
+/**
+ * Universal Translator Helpers for dynamic values across the app
+ */
+export function getStatusTranslation(status: string, lang: Language): string {
+  const t = translations[lang] || translations.en;
+  if (status === 'COMPLIANT' || status === 'PASS' || status === 'VALIDATED' || status === 'OFFICER_CONFIRMED') {
+    return t.pass;
+  }
+  if (status === 'NON_COMPLIANT' || status === 'FAIL' || status === 'POTENTIAL_VIOLATION') {
+    return t.fail;
+  }
+  return t.reviewStatus;
+}
+
+export function getCategoryTranslation(cat: string, lang: Language): string {
+  const t = translations[lang] || translations.en;
+  const lower = (cat || '').toLowerCase();
+  if (lower.includes('grain') || lower.includes('pulse') || lower.includes('rice') || lower.includes('wheat')) return t.grain;
+  if (lower.includes('oil') || lower.includes('fat') || lower.includes('ghee')) return t.edibleOil;
+  if (lower.includes('confectionery') || lower.includes('snack') || lower.includes('biscuit') || lower.includes('food')) return t.confectionery;
+  if (lower.includes('cosmetic') || lower.includes('toiletry') || lower.includes('soap')) return t.cosmetics;
+  if (lower.includes('beverage') || lower.includes('milk') || lower.includes('dairy') || lower.includes('tea') || lower.includes('coffee')) return t.beverage;
+  return cat || t.allCategories;
+}
+
+export function getDeclarationFieldTranslation(field: string, lang: Language): string {
+  const t = translations[lang] || translations.en;
+  const lower = (field || '').toLowerCase();
+  if (lower.includes('mrp') || lower.includes('price')) return t.mrpDecl;
+  if (lower.includes('qty') || lower.includes('quantity') || lower.includes('weight')) return t.netQuantityDecl;
+  if (lower.includes('date') || lower.includes('pkd') || lower.includes('packing')) return t.packDateDecl;
+  if (lower.includes('care') || lower.includes('help') || lower.includes('consumer')) return t.consumerCareDecl;
+  if (lower.includes('mfr') || lower.includes('manufacturer') || lower.includes('packer') || lower.includes('address')) return t.manufacturerDecl;
+  return field.replace(/_/g, ' ');
+}

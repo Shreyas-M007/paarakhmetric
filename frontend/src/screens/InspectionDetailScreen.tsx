@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ArrowLeft, Download, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck } from 'lucide-react';
 import { computeRuleTally } from '../utils/mapInspection';
-import { Language, translations } from '../i18n';
+import { Language, translations, getStatusTranslation, getDeclarationFieldTranslation, getCategoryTranslation } from '../i18n';
+
 
 interface InspectionDetailScreenProps {
   inspection: any;
@@ -22,8 +23,7 @@ export default function InspectionDetailScreen({
   const displayImage = capturedImage || inspection.image_url;
 
   const { failed, total } = computeRuleTally(inspection.compliance_results);
-  const statusLabel = inspection.status === 'COMPLIANT' ? (t.compliant || 'Compliant') :
-    inspection.status === 'NON_COMPLIANT' ? (t.fail || 'Non-compliant') : (t.needsReview || 'Review');
+  const statusLabel = getStatusTranslation(inspection.status, language);
   const statusColor = inspection.status === 'COMPLIANT' ? 'text-success' :
     inspection.status === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning';
 
@@ -67,7 +67,7 @@ export default function InspectionDetailScreen({
                 <Scan className="w-4 h-4 text-accent" /> {t.labelVisualizer || "Label Visualizer"}
               </span>
               <span className="text-[10px] bg-surface-elevated text-fg-muted px-2 py-0.5 rounded font-mono">
-                {inspection.product?.category || 'General'}
+                {getCategoryTranslation(inspection.product?.category, language)}
               </span>
             </div>
 
@@ -80,7 +80,7 @@ export default function InspectionDetailScreen({
                       ? 'bg-accent text-on-accent border-accent'
                       : 'bg-surface-elevated text-fg-muted border-transparent hover:bg-surface'
                   }`}>
-                  {side === 'front' ? (t.frontPanelPdp || 'Front (PDP)') : side === 'back' ? (t.backLabel || 'Back Panel') : (t.sideViews || 'Side Views')}
+                  {side === 'front' ? t.frontPanelPdp : side === 'back' ? t.backLabel : t.sideViews}
                 </button>
               ))}
             </div>
@@ -104,11 +104,15 @@ export default function InspectionDetailScreen({
           {/* Rule tally hero */}
           <section className="bg-surface rounded-2xl p-6 border border-divider/60 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-fg-muted uppercase tracking-wider">Statutory Evaluation Summary</span>
+              <span className="text-xs font-bold text-fg-muted uppercase tracking-wider">
+                {language === 'hi' ? 'वैधानिक मूल्यांकन सारांश' : language === 'kn' ? 'ಶಾಸನಬದ್ಧ ಮೌಲ್ಯಮಾಪನ ಸಾರಾಂಶ' : 'Statutory Evaluation Summary'}
+              </span>
               <ShieldCheck className="w-5 h-5 text-accent" />
             </div>
             <div className="font-display text-[36px] leading-tight font-bold text-fg mt-2">
-              {failed}<span className="text-[18px] font-medium text-fg-muted ml-1.5">of {total} rules failed</span>
+              {failed}<span className="text-[18px] font-medium text-fg-muted ml-1.5">
+                {language === 'hi' ? `में से ${total} नियम असफल` : language === 'kn' ? `ರಲ್ಲಿ ${total} ನಿಯಮಗಳು ವಿಫಲವಾಗಿವೆ` : `of ${total} rules failed`}
+              </span>
             </div>
             {failed > 0 ? (
               <p className="text-[13px] text-error font-medium mt-1">
@@ -117,14 +121,18 @@ export default function InspectionDetailScreen({
               </p>
             ) : (
               <p className="text-[13px] text-success font-medium mt-1">
-                All statutory Legal Metrology declarations verified and compliant.
+                {language === 'hi' ? 'सभी वैधानिक विधिक मापविज्ञान घोषणाएं सत्यापित और अनुपालन में हैं।' :
+                 language === 'kn' ? 'ಎಲ್ಲಾ ಶಾಸನಬದ್ಧ ಕಾನೂನು ಮಾಪನಶಾಸ್ತ್ರ ಘೋಷಣೆಗಳು ಪರಿಶೀಲಿಸಲ್ಪಟ್ಟಿವೆ ಮತ್ತು ಅನುಸರಣೆಯಲ್ಲಿವೆ.' :
+                 'All statutory Legal Metrology declarations verified and compliant.'}
               </p>
             )}
           </section>
 
           {/* Declarations table */}
           <section className="flex flex-col gap-3">
-            <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">Statutory Declarations</span>
+            <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">
+              {t.statutoryRequirement}
+            </span>
             <div className="flex flex-col gap-2">
               {inspection.declarations?.map((decl: any) => {
                 const isEditing = editingField === decl.field_name;
@@ -132,7 +140,7 @@ export default function InspectionDetailScreen({
                   <div key={decl.field_name || decl.id} className="bg-surface rounded-2xl p-4 flex items-center gap-3 border border-divider/60">
                     <div className="flex-1 min-w-0">
                       <span className="text-[14px] font-semibold text-fg capitalize block truncate">
-                        {(decl.field_name || '').replace(/_/g, ' ')}
+                        {getDeclarationFieldTranslation(decl.field_name, language)}
                       </span>
                       {isEditing ? (
                         <div className="flex gap-2 mt-1">
@@ -142,7 +150,7 @@ export default function InspectionDetailScreen({
                             className="text-accent p-1 cursor-pointer"><Save className="w-4 h-4" /></button>
                         </div>
                       ) : (
-                        <span className="text-[13px] text-fg-muted block truncate">{decl.value || 'Not detected'}</span>
+                        <span className="text-[13px] text-fg-muted block truncate">{decl.value || (language === 'hi' ? 'नहीं मिला' : language === 'kn' ? 'ಪತ್ತೆಯಾಗಿಲ್ಲ' : 'Not detected')}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -169,15 +177,20 @@ export default function InspectionDetailScreen({
 
           {/* Compliance rule results */}
           <section className="flex flex-col gap-3">
-            <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">Rule Verdicts</span>
+            <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-semibold font-body">
+              {t.ruleVerdicts}
+            </span>
             <div className="flex flex-col gap-2">
               {inspection.compliance_results?.map((rule: any, idx: number) => {
                 const ruleStatusColor = rule.status === 'PASS' ? 'text-success' : rule.status === 'FAIL' ? 'text-error font-bold' : 'text-warning';
-                const ruleStatusLabel = rule.status === 'PASS' ? 'Pass' : rule.status === 'FAIL' ? 'Fail' : 'Review';
+                const ruleStatusLabel = getStatusTranslation(rule.status, language);
                 return (
                   <div key={rule.rule_id || idx} className="bg-surface rounded-2xl p-4 flex items-center gap-3 border border-divider/60">
                     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                      <span className="text-[14px] font-semibold text-fg truncate">{rule.rule_id} · {rule.field || ''}</span>
+                      <span className="text-[14px] font-semibold text-fg truncate">
+                        {rule.rule_id} · {getDeclarationFieldTranslation(rule.field || '', language)}
+                      </span>
+
                       <span className="text-[13px] text-fg-muted truncate">{rule.details}</span>
                     </div>
                     <span className={`flex-shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${ruleStatusColor}`}>

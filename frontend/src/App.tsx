@@ -670,8 +670,9 @@ export default function App() {
 
   const activeInspection = inspections.find(i => i.id === selectedInspectionId) || inspections[0];
 
-  // Map backend inspections to component shape
-  const mappedInspections: MappedInspection[] = inspections.map(mapBackendInspection);
+  // Map backend inspections to component shape with localized categories and time
+  const mappedInspections: MappedInspection[] = inspections.map(i => mapBackendInspection(i, language));
+
 
   // ============================================================
   //  RENDER
@@ -815,7 +816,9 @@ export default function App() {
         isBatchProcessing={isBatchProcessing}
         isBatchComplete={isBatchComplete}
         onApprove={handleApproveBatchItem}
+        language={language}
       />
+
     </>
   );
 }

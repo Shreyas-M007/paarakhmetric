@@ -125,7 +125,9 @@ export default function InspectionsScreen({
             inspections={list} 
             onRowClick={onRowClick} 
             gridMode={true}
+            language={language}
           />
+
         </div>
       </div>
     </div>

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Search, FileText, Download, Share2, CheckCircle2, TrendingUp, BarChart3, ShieldAlert } from 'lucide-react';
 import InspectionList, { Inspection } from '../components/InspectionList';
-import { Language, translations } from '../i18n';
+import { Language, translations, getStatusTranslation } from '../i18n';
+
+
 
 
 interface ReportsScreenProps {
@@ -328,17 +330,17 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
                 {language === 'hi' ? `निरीक्षण #${activeInspection.id}` : language === 'kn' ? `ತಪಾಸಣೆ #${activeInspection.id}` : `Selected Record #${activeInspection.id}`}
               </span>
               <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${
-                activeInspection.status === 'COMPLIANT' ? 'text-success' : activeInspection.status === 'NON_COMPLIANT' ? 'text-error' : 'text-warning'
+                activeInspection.status === 'COMPLIANT' ? 'text-success' : activeInspection.status === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning'
               }`}>
                 <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                {activeInspection.status === 'COMPLIANT' ? (t.compliant || 'Compliant') : activeInspection.status === 'NON_COMPLIANT' ? (t.violationsFound || 'Non-compliant') : (t.needsReview || 'Review')}
+                {getStatusTranslation(activeInspection.status, language)}
               </span>
             </div>
 
             <div>
               <div className="font-display text-[24px] font-bold text-fg">{activeInspection.title}</div>
               <div className="text-[13px] whitespace-nowrap overflow-hidden text-ellipsis text-fg-muted">
-                {activeInspection.meta} · Officer Shrey
+                {activeInspection.meta} · {t.officer} Shrey
               </div>
             </div>
 
@@ -348,7 +350,7 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
                 className="flex-1 flex items-center justify-center gap-2 bg-accent text-on-accent rounded-full p-4 text-[15px] font-bold active:scale-95 transition-transform shadow-lg shadow-accent/20 cursor-pointer"
               >
                 <Download className="w-5 h-5" />
-                {t.downloadPdf || "Generate PDF Notice"}
+                {t.downloadPdf}
               </button>
               <button 
                 onClick={handleShare}
@@ -360,7 +362,7 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
             </div>
 
             <div className="text-[12px] text-fg-muted text-center">
-              Report available for print or instant dispatch · {activeInspection.timeInfo || 'Today'}
+              {t.reportPrintAvailable} · {activeInspection.timeInfo || 'Today'}
             </div>
           </section>
 
@@ -373,11 +375,13 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
                 setSelectedId(id);
                 onRowClick(id);
               }} 
+              language={language}
             />
           </div>
         </div>
       </div>
     </div>
+
   );
 }
 

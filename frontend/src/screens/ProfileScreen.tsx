@@ -215,18 +215,18 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
             </div>
             <div>
               <p className="font-display text-[26px] font-bold leading-tight m-0 text-fg">{name}</p>
-              <p className="text-[13px] text-fg-muted font-medium mt-1">Legal Metrology Field Officer · ID OF-2291</p>
+              <p className="text-[13px] text-fg-muted font-medium mt-1">{t.fieldOfficer}</p>
             </div>
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-success/10 border border-success/30 text-success">
-              <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>Enforcement Session Active
+              <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>{t.sessionActive}
             </span>
           </section>
 
           <StatGrid 
             columns={2}
             items={[
-              { id: 'region', label: 'Assigned District', value: region },
-              { id: 'version', label: 'App Version', value: 'v2.4 Live' }
+              { id: 'region', label: t.assignedRegion, value: region },
+              { id: 'version', label: t.appVersionLabel, value: 'v2.4 Live' }
             ]} 
           />
 
@@ -235,7 +235,7 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
             className="flex items-center justify-center gap-2 w-full bg-surface hover:bg-error/10 border border-divider hover:border-error/40 text-error rounded-2xl py-3.5 px-4 font-bold text-sm transition-colors active:scale-95 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
-            <span>{t.signOut || "Log out from Enforcement Portal"}</span>
+            <span>{t.signOut}</span>
           </button>
         </div>
 
@@ -256,7 +256,9 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
             </div>
 
             <p className="text-xs text-fg-muted leading-relaxed">
-              PaarakhMetric embeds multilingual deep-learning OCR and Vision LLMs capable of recognizing packaging declarations, standard units, numerical MRP values, and dates across all major Indian scripts:
+              {language === 'hi' ? 'पारखमेट्रिक विधिक मापविज्ञान के लिए 12 भारतीय लिपियों में डीप-लर्निंग ओसीआर व विज़न एलएलएम का समर्थन करता है:' :
+               language === 'kn' ? 'ಪಾರಖ್‌ಮೆಟ್ರಿಕ್ ಕಾನೂನು ಮಾಪನಶಾಸ್ತ್ರ ಅನುಸರಣೆಗಾಗಿ 12 ಭಾರತೀಯ ಲಿಪಿಗಳಲ್ಲಿ OCR ಮತ್ತು AI ಪರಿಶೀಲನೆಯನ್ನು ಬೆಂಬಲಿಸುತ್ತದೆ:' :
+               'PaarakhMetric embeds multilingual deep-learning OCR and Vision LLMs capable of recognizing packaging declarations across all major Indian scripts:'}
             </p>
 
             {/* Grid of Indic Languages */}
@@ -286,14 +288,14 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
                 className="px-4 py-2 bg-surface-elevated hover:bg-surface border border-divider rounded-xl text-xs font-bold text-fg flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <Globe className="w-4 h-4 text-accent" />
-                <span>Switch Interface Language / भाषा बदलें</span>
+                <span>{language === 'hi' ? 'इंटरफ़ेस भाषा बदलें' : language === 'kn' ? 'ಭಾಷೆಯನ್ನು ಬದಲಾಯಿಸಿ' : 'Switch Interface Language'}</span>
               </button>
             </div>
           </section>
 
           {/* Account Operations & Preferences */}
           <section className="bg-surface rounded-2xl p-6 border border-divider/60 flex flex-col gap-3 shadow-sm">
-            <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Account & Officer Preferences</span>
+            <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">{t.accountOperations}</span>
             <div className="flex flex-col divide-y divide-divider/60">
               <button 
                 onClick={() => setActiveModal('edit')}
@@ -303,8 +305,8 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
                   <UserCog className="w-4 h-4" />
                 </span>
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-[15px] font-semibold text-fg">Edit Officer Details</span>
-                  <span className="text-[12px] text-fg-muted">Name, contact email, assigned district and jurisdiction</span>
+                  <span className="text-[15px] font-semibold text-fg">{t.editProfileDetails}</span>
+                  <span className="text-[12px] text-fg-muted">{t.editProfileSub}</span>
                 </span>
               </button>
               
@@ -316,8 +318,8 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
                   <ShieldCheck className="w-4 h-4" />
                 </span>
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-[15px] font-semibold text-fg">Role &amp; Statutory Permissions</span>
-                  <span className="text-[12px] text-fg-muted">Field Officer · L2 Legal Metrology statutory inspection rights</span>
+                  <span className="text-[15px] font-semibold text-fg">{t.rolePermissions}</span>
+                  <span className="text-[12px] text-fg-muted">{t.rolePermissionsSub}</span>
                 </span>
               </button>
               
@@ -329,14 +331,15 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
                   <LifeBuoy className="w-4 h-4" />
                 </span>
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className="text-[15px] font-semibold text-fg">Departmental Support Desk</span>
-                  <span className="text-[12px] text-fg-muted">Legal Metrology enforcement helpline · Mon–Sat, 9am–6pm</span>
+                  <span className="text-[15px] font-semibold text-fg">{t.contactSupport}</span>
+                  <span className="text-[12px] text-fg-muted">{t.contactSupportSub}</span>
                 </span>
               </button>
             </div>
           </section>
         </div>
       </div>
+
 
       {/* Edit Profile Modal */}
       {activeModal === 'edit' && (

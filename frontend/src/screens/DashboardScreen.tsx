@@ -220,7 +220,9 @@ export default function DashboardScreen({
               title=""
               inspections={filteredInspections.slice(0, 8)} 
               onRowClick={onRowClick} 
+              language={language}
             />
+
           </div>
         </div>
       </div>
