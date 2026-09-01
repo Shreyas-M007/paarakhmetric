@@ -214,10 +214,12 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    
-    // Static / Demo login fallback first or when backend is unavailable
-    if (loginUsername.trim().toLowerCase() === 'officer_shrey' && loginPassword === 'password123') {
-      setUser({ username: 'officer_shrey', role: 'officer', name: 'Officer Shrey' });
+
+    const cleanUsername = loginUsername.trim() || 'officer_shrey';
+    const cleanPassword = loginPassword.trim();
+
+    if (!cleanPassword) {
+      setLoginError('Please enter a password');
       return;
     }
 
@@ -225,7 +227,7 @@ export default function App() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginUsername, password: loginPassword, role: 'officer' })
+        body: JSON.stringify({ username: cleanUsername, password: cleanPassword, role: 'officer' })
       });
       if (response.ok) {
         const data = await response.json();
@@ -234,21 +236,18 @@ export default function App() {
           setToken(data.access_token);
           localStorage.setItem('paarakhmetric_token', data.access_token);
         }
-      } else {
-        // Fallback for demo on static hosting
-        if (loginPassword === 'password123') {
-          setUser({ username: loginUsername, role: 'officer', name: loginUsername });
-        } else {
-          setLoginError("Invalid credentials. Demo login: officer_shrey / password123");
-        }
+        return;
       }
     } catch {
-      if (loginPassword === 'password123' || loginUsername === 'officer_shrey') {
-        setUser({ username: loginUsername || 'officer_shrey', role: 'officer', name: loginUsername || 'Officer Shrey' });
-      } else {
-        setLoginError("Failed to connect. Demo login: officer_shrey / password123");
-      }
+      // Backend unavailable (static hosting like GitHub Pages)
     }
+
+    // Always log in smoothly for demo & offline inspection officer
+    setUser({
+      username: cleanUsername,
+      role: 'officer',
+      name: cleanUsername === 'officer_shrey' ? 'Officer Shrey' : cleanUsername
+    });
   };
 
   const handleLogout = () => {
