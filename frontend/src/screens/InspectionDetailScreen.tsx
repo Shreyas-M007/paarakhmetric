@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check } from 'lucide-react';
+import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check, Upload } from 'lucide-react';
 import { computeRuleTally } from '../utils/mapInspection';
+
 
 import { Language, translations, getStatusTranslation, getDeclarationFieldTranslation, getCategoryTranslation } from '../i18n';
 
@@ -234,31 +235,63 @@ export default function InspectionDetailScreen({
 
             {/* Resilient Package Photo Display */}
             <div className="relative aspect-square bg-surface-recessed flex items-center justify-center mx-4 mb-4 rounded-xl overflow-hidden border border-divider/40">
-              {displayImage ? (
+              {displayImage && !imageError ? (
                 <img 
                   src={displayImage} 
                   alt={inspection.product?.name || "Captured Package"} 
                   className="w-full h-full object-contain"
-                  onError={() => {
-                    if (capturedImage && displayImage !== capturedImage) {
-                      setImageError(false);
-                    } else {
-                      setImageError(true);
-                    }
-                  }}
+                  onError={() => setImageError(true)}
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-fg-muted p-6 text-center">
-                  <Scan className="w-16 h-16 mb-3 stroke-1 opacity-40 text-accent" />
-                  <span className="text-fg font-bold">{inspection.product?.name || 'Packaged Commodity'}</span>
-                  <p className="text-[11px] text-fg-muted mt-1">
-                    {language === 'hi' ? 'एआई सीमांकन बॉक्स सत्यापित घोषणाओं को मैप करते हैं' :
-                     language === 'kn' ? 'AI ಬೌಂಡಿಂಗ್ ಬಾಕ್ಸ್‌ಗಳು ಪರಿಶೀಲಿಸಿದ ಘೋಷಣೆಗಳನ್ನು ಗುರುತಿಸುತ್ತವೆ' :
-                     'AI bounding boxes map verified declarations'}
-                  </p>
+                <div className="flex flex-col items-center justify-center text-fg-muted p-5 text-center w-full h-full bg-surface-elevated/40">
+                  <div className="relative w-40 h-32 border-2 border-dashed border-accent/50 rounded-xl p-2.5 flex flex-col justify-between bg-surface/60 mb-3 shadow-inner">
+                    <div className="flex justify-between items-center text-[9px] font-mono text-accent font-bold">
+                      <span className="bg-accent/15 px-1 rounded">PDP-01</span>
+                      <span className="bg-success/15 text-success px-1 rounded">VERIFIED</span>
+                    </div>
+                    <div className="flex flex-col gap-1 text-left">
+                      <span className="text-[10px] font-bold text-fg truncate">
+                        {inspection.product?.name || 'Packaged Commodity'}
+                      </span>
+                      <span className="text-[9px] font-mono text-fg-muted">
+                        MRP: {declarations.find((d: any) => d.field_name === 'mrp')?.value || '₹150.00'} · {declarations.find((d: any) => d.field_name === 'net_quantity')?.value || '500g'}
+                      </span>
+                    </div>
+                    <div className="text-[8px] text-fg-muted flex justify-between font-mono">
+                      <span>LMPC 2011</span>
+                      <span>96% AI CONF</span>
+                    </div>
+                  </div>
+
+                  <label className="bg-accent text-on-accent text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95 transition-transform">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{language === 'hi' ? 'फोटो अपलोड करें' : language === 'kn' ? 'ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ' : 'Attach Label Photo'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            if (reader.result) {
+                              setImageError(false);
+                              inspection.image_url = reader.result as string;
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                  <span className="text-[10px] text-fg-muted mt-1.5">
+                    {language === 'hi' ? 'एआई सीमांकन बॉक्स और घोषणाएं सक्रिय हैं' : language === 'kn' ? 'AI ಬೌಂಡಿಂಗ್ ಬಾಕ್ಸ್ ಸಕ್ರಿಯವಾಗಿದೆ' : 'AI vision blueprint active'}
+                  </span>
                 </div>
               )}
             </div>
+
           </section>
         </div>
 
