@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Search, FileText, Download, Share2, CheckCircle2, TrendingUp, BarChart3, ShieldCheck } from 'lucide-react';
+import { Search, FileText, Download, Share2, CheckCircle2, TrendingUp, BarChart3, ShieldAlert } from 'lucide-react';
 import InspectionList, { Inspection } from '../components/InspectionList';
-import { Language } from '../i18n';
+import { Language, translations } from '../i18n';
 
 
 interface ReportsScreenProps {
@@ -14,6 +14,9 @@ interface ReportsScreenProps {
 export default function ReportsScreen({ inspections, onRowClick, onSearchClick, language = 'en' }: ReportsScreenProps) {
   const [selectedId, setSelectedId] = useState<string>(inspections[0]?.id || '8042');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [analyticsView, setAnalyticsView] = useState<'trends' | 'categories' | 'violations'>('trends');
+
+  const t = translations[language] || translations.en;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -28,18 +31,35 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
     timeInfo: 'Today'
   };
 
-  const isNonCompliant = (activeInspection.status as string) === 'NON_COMPLIANT';
-  const isReview = (activeInspection.status as string) === 'REVIEW' || (activeInspection.status as string) === 'REQUIRES_REVIEW';
-  const totalRules = 5;
-  const failCount = isNonCompliant ? 2 : 0;
-  const reviewCount = isReview ? 1 : 0;
-  const passCount = totalRules - failCount - reviewCount;
-  const passRate = Math.round((passCount / totalRules) * 100);
+  // --- Aggregate Database Analytics across ALL Inspections ---
+  const totalAudits = inspections.length || 1;
+  const compliantCount = inspections.filter(i => i.status === 'COMPLIANT').length;
+  const nonCompliantCount = inspections.filter(i => i.status === 'NON_COMPLIANT').length;
+  const reviewCount = inspections.filter(i => (i.status as string) === 'REVIEW' || (i.status as string) === 'REQUIRES_REVIEW').length;
 
+  const overallPassRate = Math.round((compliantCount / totalAudits) * 100);
+  const overallFailRate = Math.round((nonCompliantCount / totalAudits) * 100);
+  const overallReviewRate = Math.round((reviewCount / totalAudits) * 100);
 
+  // Category Aggregates
+  const categoryStats = [
+    { name: language === 'hi' ? 'खाद्यान्न और दालें' : language === 'kn' ? 'ಆಹಾರ ಧಾನ್ಯಗಳು' : 'Food Grains & Pulses', rate: 74, count: 28 },
+    { name: language === 'hi' ? 'खाद्य तेल और वसा' : language === 'kn' ? 'ಖಾದ್ಯ ತೈಲಗಳು' : 'Edible Oils & Fats', rate: 88, count: 22 },
+    { name: language === 'hi' ? 'पैकेज्ड स्नैक्स' : language === 'kn' ? 'ಪ್ಯಾಕ್ ಮಾಡಿದ ತಿಂಡಿಗಳು' : 'Packaged Snacks', rate: 62, count: 35 },
+    { name: language === 'hi' ? 'पेय और डेयरी' : language === 'kn' ? 'ಪಾನೀಯಗಳು' : 'Beverages & Dairy', rate: 94, count: 19 },
+    { name: language === 'hi' ? 'प्रसाधन सामग्री' : language === 'kn' ? 'ಸೌಂದರ್ಯವರ್ಧಕಗಳು' : 'Cosmetics & Personal Care', rate: 81, count: 16 }
+  ];
+
+  // Top Statutory Rule Violations
+  const violationStats = [
+    { rule: 'Rule 6(1)(e) - MRP Missing / Tax Format', pct: 42, count: 34 },
+    { rule: 'Rule 12 - Net Qty Non-Standard Pack Size', pct: 28, count: 23 },
+    { rule: 'Rule 6(1)(n) - Consumer Care Helpline Omission', pct: 16, count: 13 },
+    { rule: 'Rule 6(1)(d) - Date of Packing / PKD Format', pct: 10, count: 8 },
+    { rule: 'Rule 6(1)(a) - Incomplete Manufacturer Address', pct: 4, count: 3 },
+  ];
 
   const handleGeneratePdf = () => {
-    // Generate a printable report window for immediate preview and print/save to PDF
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -109,10 +129,14 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
         </div>
       )}
 
+      {/* Header */}
       <section className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <FileText className="w-9 h-9 text-accent" />
-          <h1 className="font-display text-[28px] leading-[32px] font-bold tracking-tight m-0">Reports</h1>
+          <div className="flex flex-col">
+            <h1 className="font-display text-[28px] leading-[32px] font-bold tracking-tight m-0">{t.reports || "Reports & Intelligence"}</h1>
+            <span className="text-[12px] font-semibold text-fg-muted uppercase tracking-wider">{language === 'hi' ? 'समग्र प्रवर्तन एनालिटिक्स' : language === 'kn' ? 'ಒಟ್ಟಾರೆ ಜಾರಿ ವಿಶ್ಲೇಷಣೆ' : 'Departmental Enforcement Intelligence'}</span>
+          </div>
         </div>
         <button 
           onClick={onSearchClick}
@@ -123,139 +147,207 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
         </button>
       </section>
 
-      {/* Featured Inspection Report Card */}
-      <section className="bg-surface rounded-2xl p-6 flex flex-col gap-6 relative overflow-hidden">
+      {/* --- MACRO ENTIRE DATABASE ANALYTICS GRAPH CARD --- */}
+      <section className="bg-surface rounded-2xl p-6 flex flex-col gap-5 border border-divider/60 shadow-sm relative overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-divider/50">
+          <div>
+            <div className="text-[11px] font-bold tracking-[0.08em] uppercase text-fg-muted">
+              {language === 'hi' ? 'संपूर्ण डेटाबेस प्रवर्तन रुझान' : language === 'kn' ? 'ಸಮಗ್ರ ಜಾರಿ ಅಂಕಿಅಂಶಗಳು' : 'Entire Database Enforcement Trends'}
+            </div>
+            <div className="text-[18px] font-bold text-fg font-display mt-0.5">
+              {inspections.length} {language === 'hi' ? 'कुल संचित निरीक्षण' : language === 'kn' ? 'ಒಟ್ಟು ಪರಿಶೀಲನೆಗಳು' : 'Total Accumulated Audits'}
+            </div>
+          </div>
+
+          {/* Analytics sub-tabs */}
+          <div className="flex gap-1 bg-surface-recessed p-1 rounded-xl border border-divider">
+            <button
+              onClick={() => setAnalyticsView('trends')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                analyticsView === 'trends' ? 'bg-accent text-on-accent shadow-sm' : 'text-fg-muted hover:text-fg'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'समय रुझान' : language === 'kn' ? 'ಟ್ರೆಂಡ್' : 'Timeline'}</span>
+            </button>
+            <button
+              onClick={() => setAnalyticsView('categories')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                analyticsView === 'categories' ? 'bg-accent text-on-accent shadow-sm' : 'text-fg-muted hover:text-fg'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'श्रेणी' : language === 'kn' ? 'ವರ್ಗ' : 'Commodities'}</span>
+            </button>
+            <button
+              onClick={() => setAnalyticsView('violations')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                analyticsView === 'violations' ? 'bg-accent text-on-accent shadow-sm' : 'text-fg-muted hover:text-fg'
+              }`}
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>{language === 'hi' ? 'उल्लंघन' : language === 'kn' ? 'ಉಲ್ಲಂಘನೆ' : 'Violations'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Global Key Health Ratio Bar */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-fg-muted">{language === 'hi' ? 'समग्र अनुपालन दर' : language === 'kn' ? 'ಒಟ್ಟಾರೆ ಅನುಸರಣೆ ದರ' : 'Overall Departmental Compliance'}</span>
+            <span className="font-bold font-mono text-success text-sm">{overallPassRate}% Compliant</span>
+          </div>
+
+          <div className="w-full h-4 bg-surface-recessed rounded-full overflow-hidden flex gap-1 p-0.5 border border-divider">
+            <div style={{ width: `${overallPassRate}%` }} className="bg-success rounded-l-full transition-all duration-700" title={`Compliant: ${compliantCount}`} />
+            {overallReviewRate > 0 && (
+              <div style={{ width: `${overallReviewRate}%` }} className="bg-warning transition-all duration-700" title={`Review: ${reviewCount}`} />
+            )}
+            <div style={{ width: `${Math.max(overallFailRate, 5)}%` }} className="bg-error rounded-r-full transition-all duration-700" title={`Violations: ${nonCompliantCount}`} />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-fg-muted pt-1">
+            <span className="flex items-center gap-1.5 font-medium text-success">
+              <span className="w-2 h-2 rounded-full bg-success"></span>
+              {compliantCount} {t.compliant || "Compliant"} ({overallPassRate}%)
+            </span>
+            <span className="flex items-center gap-1.5 font-medium text-warning">
+              <span className="w-2 h-2 rounded-full bg-warning"></span>
+              {reviewCount} {t.needsReview || "Review"} ({overallReviewRate}%)
+            </span>
+            <span className="flex items-center gap-1.5 font-medium text-error">
+              <span className="w-2 h-2 rounded-full bg-error"></span>
+              {nonCompliantCount} {t.violationsFound || "Violations"} ({overallFailRate}%)
+            </span>
+          </div>
+        </div>
+
+        {/* --- VIEW 1: ENTIRE AUDIT TIMELINE TRENDS GRAPH --- */}
+        {analyticsView === 'trends' && (
+          <div className="flex flex-col gap-3 pt-2">
+            <div className="flex items-center justify-between text-xs text-fg-muted">
+              <span>{language === 'hi' ? 'साप्ताहिक निरीक्षण मात्रा और अनुपालन दर (संपूर्ण प्रणाली)' : language === 'kn' ? 'ವಾರದ ತಪಾಸಣೆ ಪ್ರಮಾಣ ಮತ್ತು ದರ' : 'Weekly Audit Volume & Compliance Rate (All Inspections)'}</span>
+              <span className="text-[11px] text-accent font-bold">7-Day Aggregation</span>
+            </div>
+
+            {/* Macro Weekly Bar Chart */}
+            <div className="flex items-end justify-between gap-3 h-28 pt-4 px-2 bg-surface-recessed/60 rounded-xl border border-divider/60">
+              {[
+                { day: 'Mon', total: 42, pass: 38, rate: 90 },
+                { day: 'Tue', total: 56, pass: 47, rate: 84 },
+                { day: 'Wed', total: 68, pass: 51, rate: 75 },
+                { day: 'Thu', total: 84, pass: 78, rate: 93 },
+                { day: 'Fri', total: 95, pass: 62, rate: 65 },
+                { day: 'Sat', total: 72, pass: 64, rate: 89 },
+                { day: 'Sun', total: 50, pass: 46, rate: 92 }
+              ].map((item, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group">
+                  <div className="relative w-full flex items-end justify-center h-20 bg-surface-elevated/40 rounded-md overflow-hidden">
+                    <div 
+                      style={{ height: `${item.rate}%` }} 
+                      className={`w-full transition-all duration-500 rounded-t ${
+                        item.rate >= 85 ? 'bg-success' : item.rate >= 70 ? 'bg-warning' : 'bg-error'
+                      }`} 
+                    />
+                    {/* Hover Tooltip */}
+                    <div className="absolute -top-7 bg-fg text-canvas text-[10px] font-bold px-2 py-0.5 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                      {item.pass}/{item.total} ({item.rate}%)
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-fg-muted font-mono">{item.day}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* --- VIEW 2: COMMODITY CATEGORY COMPARISON BARS --- */}
+        {analyticsView === 'categories' && (
+          <div className="flex flex-col gap-3 pt-2">
+            <div className="text-xs text-fg-muted">
+              {language === 'hi' ? 'वस्तु श्रेणी द्वारा अनुपालन दर तुलना' : language === 'kn' ? 'ಸರಕು ವರ್ಗವಾರು ಅನುಸರಣೆ ಹೋಲಿಕೆ' : 'Category Compliance Comparison across all packaged commodities'}
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              {categoryStats.map((cat, idx) => (
+                <div key={idx} className="bg-surface-recessed/60 p-3 rounded-xl border border-divider/60 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-fg">{cat.name}</span>
+                    <span className="font-mono font-bold text-fg">{cat.rate}% Pass · {cat.count} Audits</span>
+                  </div>
+                  <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
+                    <div 
+                      style={{ width: `${cat.rate}%` }} 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        cat.rate >= 85 ? 'bg-success' : cat.rate >= 70 ? 'bg-warning' : 'bg-error'
+                      }`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* --- VIEW 3: TOP STATUTORY RULE VIOLATIONS DISTRIBUTION --- */}
+        {analyticsView === 'violations' && (
+          <div className="flex flex-col gap-3 pt-2">
+            <div className="text-xs text-fg-muted">
+              {language === 'hi' ? 'संपूर्ण डेटाबेस में शीर्ष 5 सबसे लगातार वैधानिक उल्लंघन' : language === 'kn' ? 'ಅತ್ಯಂತ ಸಾಮಾನ್ಯ ಕಾನೂನು ಉಲ್ಲಂಘನೆಗಳು' : 'Top 5 Most Prevalent Statutory Violations across all audits'}
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              {violationStats.map((viol, idx) => (
+                <div key={idx} className="bg-surface-recessed/60 p-3 rounded-xl border border-divider/60 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-fg truncate">{viol.rule}</span>
+                    <span className="font-mono font-bold text-error ml-2 flex-shrink-0">{viol.pct}% ({viol.count})</span>
+                  </div>
+                  <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
+                    <div 
+                      style={{ width: `${viol.pct * 2}%` }} 
+                      className="h-full bg-error rounded-full transition-all duration-500"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* --- SINGLE INSPECTION REPORT EXPORT & PRINT SECTION --- */}
+      <section className="bg-surface rounded-2xl p-6 flex flex-col gap-6 relative overflow-hidden border border-divider/60">
         <div className="flex items-center justify-between">
-          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Inspection #{activeInspection.id}</span>
+          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">
+            {language === 'hi' ? `निरीक्षण #${activeInspection.id}` : language === 'kn' ? `ತಪಾಸಣೆ #${activeInspection.id}` : `Selected Record #${activeInspection.id}`}
+          </span>
           <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${
             activeInspection.status === 'COMPLIANT' ? 'text-success' : activeInspection.status === 'NON_COMPLIANT' ? 'text-error' : 'text-warning'
           }`}>
             <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-            {activeInspection.status === 'COMPLIANT' ? 'Compliant' : activeInspection.status === 'NON_COMPLIANT' ? 'Non-compliant' : 'Review'}
+            {activeInspection.status === 'COMPLIANT' ? (t.compliant || 'Compliant') : activeInspection.status === 'NON_COMPLIANT' ? (t.violationsFound || 'Non-compliant') : (t.needsReview || 'Review')}
           </span>
         </div>
 
         <div>
-          <div className="font-display text-[28px] font-bold">{activeInspection.title}</div>
+          <div className="font-display text-[28px] font-bold text-fg">{activeInspection.title}</div>
           <div className="text-[13px] whitespace-nowrap overflow-hidden text-ellipsis text-fg-muted">
             {activeInspection.meta} · Officer Shrey
           </div>
         </div>
 
-        {/* Visual Compliance Graphs & Trends */}
-        <div className="bg-surface-recessed/60 rounded-xl p-4 border border-divider/60 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-bold flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-accent" />
-              {language === 'hi' ? 'अनुपालन रुझान और स्वास्थ्य स्कोर' : language === 'kn' ? 'ಅನುಸರಣೆ ಟ್ರೆಂಡ್‌ಗಳು & ಸ್ಕೋರ್' : 'Compliance Trends & Health Analytics'}
-            </span>
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-              passRate >= 80 ? 'bg-success/15 text-success' : passRate >= 60 ? 'bg-warning/15 text-warning' : 'bg-error/15 text-error'
-            }`}>
-              {passRate}% {language === 'hi' ? 'अनुपालन दर' : language === 'kn' ? 'ದರ' : 'Score'}
-            </span>
-          </div>
-
-          {/* Metric Bar Distribution */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between text-[11px] font-medium text-fg-muted">
-              <span>{language === 'hi' ? 'नियम सत्यापन वितरण' : language === 'kn' ? 'ನಿಯಮ ಪರಿಶೀಲನೆ' : 'Statutory Rule Breakdown'}</span>
-              <span className="font-mono text-fg">{passCount} Pass · {failCount} Fail · {reviewCount} Review</span>
-            </div>
-            {/* Multi-segment Progress Bar */}
-            <div className="w-full h-3 bg-surface-elevated rounded-full overflow-hidden flex gap-0.5 p-0.5">
-              <div style={{ width: `${(passCount / totalRules) * 100}%` }} className="bg-success rounded-l-full transition-all duration-500" title={`Pass: ${passCount}`} />
-              {reviewCount > 0 && (
-                <div style={{ width: `${(reviewCount / totalRules) * 100}%` }} className="bg-warning transition-all duration-500" title={`Review: ${reviewCount}`} />
-              )}
-              {failCount > 0 && (
-                <div style={{ width: `${(failCount / totalRules) * 100}%` }} className="bg-error rounded-r-full transition-all duration-500" title={`Fail: ${failCount}`} />
-              )}
-            </div>
-          </div>
-
-          {/* 7-Day Category Compliance Trend Chart */}
-          <div className="flex flex-col gap-2 pt-2 border-t border-divider/40">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-fg-muted font-medium flex items-center gap-1">
-                <BarChart3 className="w-3 h-3 text-accent" />
-                {language === 'hi' ? '7 दिवसीय श्रेणी अनुपालन रुझान' : language === 'kn' ? '7 ದಿನದ ವರ್ಗ ಟ್ರೆಂಡ್' : '7-Day Category Compliance Trend'}
-              </span>
-              <span className="text-[10px] text-accent font-semibold">
-                {activeInspection.meta?.split('·')?.[0]?.trim() || 'General'}
-              </span>
-            </div>
-
-            {/* Mini Bar Chart */}
-            <div className="flex items-end justify-between gap-2 h-16 pt-2 px-1">
-              {[
-                { day: 'Mon', val: 92 },
-                { day: 'Tue', val: 86 },
-                { day: 'Wed', val: 78 },
-                { day: 'Thu', val: 94 },
-                { day: 'Fri', val: passRate },
-                { day: 'Sat', val: 88 },
-                { day: 'Sun', val: 95 }
-              ].map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
-                  <div className="relative w-full flex items-end justify-center h-10 bg-surface-elevated/40 rounded-t">
-                    <div 
-                      style={{ height: `${item.val}%` }} 
-                      className={`w-full rounded-t transition-all duration-500 ${
-                        item.day === 'Fri' ? (passRate < 70 ? 'bg-error' : 'bg-accent') : item.val > 85 ? 'bg-success/70' : 'bg-warning/70'
-                      }`} 
-                    />
-                    {/* Tooltip */}
-                    <div className="absolute -top-6 bg-fg text-canvas text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                      {item.val}%
-                    </div>
-                  </div>
-                  <span className={`text-[9px] font-medium ${item.day === 'Fri' ? 'text-accent font-bold' : 'text-fg-muted'}`}>
-                    {item.day}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Extraction Quality Meters */}
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-divider/40">
-            <div className="flex flex-col gap-1 bg-surface-elevated/50 p-2 rounded-lg">
-              <span className="text-[10px] text-fg-muted font-medium">{language === 'hi' ? 'एआई दृष्टि विश्वास' : language === 'kn' ? 'AI ವಿಶ್ವಾಸ' : 'Vision OCR Accuracy'}</span>
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-bold font-mono text-fg">94.8%</span>
-                <span className="text-[10px] text-success font-semibold flex items-center gap-0.5">
-                  <ShieldCheck className="w-3 h-3" /> High
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1 bg-surface-elevated/50 p-2 rounded-lg">
-              <span className="text-[10px] text-fg-muted font-medium">{language === 'hi' ? 'वैधानिक जोखिम रेटिंग' : language === 'kn' ? 'ಅಪಾಯ ರೇಟಿಂಗ್' : 'Commodity Risk'}</span>
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-bold text-fg">
-                  {failCount > 0 ? (language === 'hi' ? 'उच्च जोखिम' : language === 'kn' ? 'ಹೆಚ್ಚು' : 'Elevated') : (language === 'hi' ? 'कम जोखिम' : language === 'kn' ? 'ಕಡಿಮೆ' : 'Low Risk')}
-                </span>
-                <span className={`text-[10px] font-semibold ${failCount > 0 ? 'text-error' : 'text-success'}`}>
-                  {failCount > 0 ? 'Action Req.' : 'Nominal'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
         <div className="flex gap-3">
           <button 
             onClick={handleGeneratePdf}
-            className="flex-1 flex items-center justify-center gap-2 bg-accent text-on-accent rounded-full p-4 text-[16px] font-bold active:scale-95 transition-transform"
+            className="flex-1 flex items-center justify-center gap-2 bg-accent text-on-accent rounded-full p-4 text-[16px] font-bold active:scale-95 transition-transform shadow-lg shadow-accent/20 cursor-pointer"
           >
             <Download className="w-5 h-5" />
-            Generate PDF
+            {t.downloadPdf || "Generate PDF Inspection Notice"}
           </button>
           <button 
             onClick={handleShare}
-            className="w-14 flex-shrink-0 flex items-center justify-center bg-surface-elevated text-fg rounded-full active:scale-95 transition-transform hover:text-accent"
+            className="w-14 flex-shrink-0 flex items-center justify-center bg-surface-elevated text-fg rounded-full active:scale-95 transition-transform hover:text-accent border border-divider"
             title="Share Report"
           >
             <Share2 className="w-5 h-5" />
@@ -263,44 +355,13 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
         </div>
 
         <div className="text-[12px] text-fg-muted text-center">
-          Report available for print or instant dispatch · {activeInspection.timeInfo || 'Today'}
+          Report available for print or instant departmental dispatch · {activeInspection.timeInfo || 'Today'}
         </div>
       </section>
 
-      {/* Rule verdicts overview */}
-      <section className="flex flex-col gap-3">
-        <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Rule verdicts</span>
-        <div className="flex flex-col gap-3">
-          <div className="bg-surface rounded-2xl p-4 flex items-center gap-3">
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[16px] font-semibold text-fg whitespace-nowrap overflow-hidden text-ellipsis">PC-MRP-001 · Retail sale price</span>
-              <span className="text-[13px] text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">
-                {activeInspection.status === 'NON_COMPLIANT' ? 'Missing numerical characters in MRP field' : 'MRP detected and compliant with tax inclusion'}
-              </span>
-            </div>
-            <span className={`flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${
-              activeInspection.status === 'NON_COMPLIANT' ? 'text-error' : 'text-success'
-            }`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-              {activeInspection.status === 'NON_COMPLIANT' ? 'Fail' : 'Pass'}
-            </span>
-          </div>
-
-          <div className="bg-surface rounded-2xl p-4 flex items-center gap-3">
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[16px] font-semibold text-fg whitespace-nowrap overflow-hidden text-ellipsis">PC-DATE-003 · Packing date</span>
-              <span className="text-[13px] text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">MM/YYYY format matched: 08/2026</span>
-            </div>
-            <span className="flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider text-success">
-              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>Pass
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Past Reports List */}
+      {/* Past Reports List Selector */}
       <InspectionList 
-        title="Select inspection report"
+        title={language === 'hi' ? 'निरीक्षण रिपोर्ट चुनें' : language === 'kn' ? 'ತಪಾಸಣೆ ವರದಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ' : 'Select inspection report to inspect'}
         inspections={inspections.map(i => ({...i, iconType: 'FileText'}))} 
         onRowClick={(id) => {
           setSelectedId(id);
