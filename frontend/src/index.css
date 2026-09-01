@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=switzer@300,400,500,600,700,800,900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --gesso-font-display: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+    --gesso-font-body: "Switzer", system-ui, -apple-system, sans-serif;
+  }
+
+  /* Theme: Civic Ledger (Default) */
+  :root[data-theme="civic-ledger"] {
+    --gesso-canvas: #0A0F12;
+    --gesso-surface: #484c4e;
+    --gesso-surface-elevated: #535759;
+    --gesso-surface-recessed: #0a0e11;
+    --gesso-fg: #FFFFFF;
+    --gesso-fg-muted: #7A7A7A;
+    --gesso-divider: rgba(255,255,255,0.04);
+    --gesso-accent: #f4c210;
+    --gesso-accent-2: #d1d131;
+    --gesso-on-accent: #000000;
+    --gesso-success: #8fae1c;
+    --gesso-warning: #f4c210;
+    --gesso-error: #d1d131;
+    --gesso-primary: var(--gesso-accent);
+    --gesso-secondary: var(--gesso-accent-2);
+    --gesso-radius-sm: 0px; 
+    --gesso-radius-md: 2px; 
+    --gesso-radius-lg: 4px; 
+    --gesso-radius-full: 9999px;
+    --gesso-shadow-sm: none; 
+    --gesso-shadow-md: none; 
+    --gesso-shadow-lg: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  /* Theme: Default Noir */
+  :root[data-theme="default-noir"] {
+    --gesso-canvas: #000000;
+    --gesso-surface: #414141;
+    --gesso-surface-elevated: #4c4c4c;
+    --gesso-surface-recessed: #000000;
+    --gesso-fg: #FFFFFF;
+    --gesso-fg-muted: #7A7A7A;
+    --gesso-divider: rgba(255,255,255,0.04);
+    --gesso-accent: #E89A2C;
+    --gesso-accent-2: #2A3DBE;
+    --gesso-on-accent: #000000;
+    --gesso-success: #3fae6a;
+    --gesso-warning: #e0972a;
+    --gesso-error: #d13a3a;
+    --gesso-primary: var(--gesso-accent);
+    --gesso-secondary: var(--gesso-accent-2);
+    --gesso-radius-sm: 8px;
+    --gesso-radius-md: 16px;
+    --gesso-radius-lg: 24px;
+    --gesso-radius-full: 9999px;
+    --gesso-shadow-sm: none;
+    --gesso-shadow-md: none;
+    --gesso-shadow-lg: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  /* Theme: Daylight Registry */
+  :root[data-theme="daylight-registry"] {
+    --gesso-canvas: #F5F4F1;
+    --gesso-surface: #ECEAE4;
+    --gesso-surface-elevated: #DDD6CE;
+    --gesso-surface-recessed: #F5F4F1;
+    --gesso-fg: #171511;
+    --gesso-fg-muted: #716D62;
+    --gesso-divider: rgba(0,0,0,0.04);
+    --gesso-accent: #B54708;
+    --gesso-accent-2: #1A4731;
+    --gesso-on-accent: #FFFFFF;
+    --gesso-success: #15653A;
+    --gesso-warning: #92400E;
+    --gesso-error: #991B1B;
+    --gesso-primary: var(--gesso-accent);
+    --gesso-secondary: var(--gesso-accent-2);
+    --gesso-radius-sm: 8px;
+    --gesso-radius-md: 16px;
+    --gesso-radius-lg: 24px;
+    --gesso-radius-full: 9999px;
+    --gesso-shadow-sm: none;
+    --gesso-shadow-md: none;
+    --gesso-shadow-lg: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  /* Theme: High Contrast */
+  :root[data-theme="high-contrast"] {
+    --gesso-canvas: #000000;
+    --gesso-surface: #000000;
+    --gesso-surface-elevated: #111111;
+    --gesso-surface-recessed: #000000;
+    --gesso-fg: #FFFFFF;
+    --gesso-fg-muted: #CCCCCC;
+    --gesso-divider: #FFFFFF;
+    --gesso-accent: #FFFF00;
+    --gesso-accent-2: #00FFFF;
+    --gesso-on-accent: #000000;
+    --gesso-success: #00FF00;
+    --gesso-warning: #FFFF00;
+    --gesso-error: #FF0000;
+    --gesso-primary: var(--gesso-accent);
+    --gesso-secondary: var(--gesso-accent-2);
+    --gesso-radius-sm: 0px;
+    --gesso-radius-md: 0px;
+    --gesso-radius-lg: 0px;
+    --gesso-radius-full: 0px;
+    --gesso-shadow-sm: none;
+    --gesso-shadow-md: none;
+    --gesso-shadow-lg: none;
+  }
+
+  body {
+    background-color: var(--gesso-canvas);
+    color: var(--gesso-fg);
+    font-family: var(--gesso-font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Animations */
+@keyframes gesso-verdict-settle {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes gesso-tally-tick {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
