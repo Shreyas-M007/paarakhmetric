@@ -88,6 +88,71 @@ def parse_with_llm(ocr_text: str, avg_ocr_confidence: float) -> Dict[str, Any]:
         results["unsupported_language_detected"] = parsed.get("unsupported_language_detected", False)
         return results
         
+from PIL import Image
+
+def parse_with_vision_llm(image_path: str, fallback_ocr_text: str = "") -> Dict[str, Any]:
+    """
+    Step 6 Extension: Vision LLM Extraction.
+    Uses Gemini Vision to read directly from the cropped ROI, bypassing standard OCR errors.
+    """
+    load_dotenv()
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("WARNING: GEMINI_API_KEY not set. Vision LLM skipped.")
+        return {}
+        
+    client = genai.Client(api_key=api_key)
+    
+    prompt = f"""
+    You are an AI Legal Metrology Compliance Inspector.
+    Examine this product label image and extract the 10 statutory declarations.
+    
+    Apply this Logic Tree:
+    1. If found, set status 'FOUND' and extract the exact value.
+    2. If completely missing, set status 'MISSING'.
+    3. If present but unreadable/obfuscated, set status 'UNREADABLE'.
+    4. If non-English/Hindi scripts are prominent, set unsupported_language_detected to true.
+    
+    Fallback OCR text (may be garbled):
+    {fallback_ocr_text}
+    """
+    
+    try:
+        img = Image.open(image_path)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[img, prompt],
+            config={
+                'response_mime_type': 'application/json',
+                'response_schema': LLM_LMPC_Result,
+                'temperature': 0.1
+            },
+        )
+        
+        parsed = json.loads(response.text)
+        
+        results = {}
+        for field in ["mrp", "net_quantity", "packing_date", "best_before", "manufacturer", 
+                      "country_of_origin", "generic_name", "unit_sale_price", "dimensions", "consumer_care"]:
+            data = parsed.get(field, {})
+            status = data.get("status", "MISSING")
+            
+            if status == "FOUND":
+                conf = 0.95
+            elif status == "UNREADABLE":
+                conf = 0.50
+            else:
+                conf = 0.0
+                
+            results[field] = {
+                "value": data.get("value") or "",
+                "confidence": conf,
+                "original_text": data.get("original_text") or ""
+            }
+            
+        results["unsupported_language_detected"] = parsed.get("unsupported_language_detected", False)
+        return results
+        
     except Exception as e:
-        print(f"LLM Parsing Error: {e}")
+        print(f"Vision LLM Error: {e}")
         return {}

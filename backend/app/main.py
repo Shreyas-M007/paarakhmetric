@@ -399,176 +399,93 @@ async def upload_image(
     db.commit()
     db.refresh(db_image)
     
-    # 2. Run Image Quality Assessment
-    quality_metrics = analyze_image_quality(filepath)
-    if not quality_metrics.get("is_acceptable", True):
-        return {
-            "status": "REVIEW",
-            "message": "Image quality check failed. Warnings triggered.",
-            "quality": quality_metrics,
-            "image_id": db_image.id
-        }
-
-    # 3. OpenCV Preprocessing (Correct skew & rotation)
-    try:
-        corrected_img = correct_skew(filepath)
-        enhanced_img = apply_contrast_enhancement(corrected_img)
-        shutil.copyfile(filepath, filepath + ".original.jpg")
-        import cv2
-        cv2.imwrite(filepath, enhanced_img)
-    except Exception:
-        pass
-
-    # 4. Execute OCR
-    ocr_raw = perform_ocr(filepath)
+        # --- EXECUTE EXACT PAARAKHMETRIC PIPELINE ---
+    from app.pipeline.orchestrator import run_paarakhmetric_pipeline
+    
+    pipeline_result = run_paarakhmetric_pipeline(filepath, use_vision_llm=True)
+    
+    parsed_decls = pipeline_result.get('extracted_fields', {})
+    compliance = pipeline_result.get('compliance_report', {})
+    ocr_raw = pipeline_result.get('ocr_raw', [])
     
     # Save OCR words/bboxes into DB for audit
-    for item in ocr_raw:
-        db_ocr = OCRResult(
-            product_image_id=db_image.id,
-            text=item["text"],
-            confidence=item["confidence"],
-            bbox_x=item["bounding_box"]["x"],
-            bbox_y=item["bounding_box"]["y"],
-            bbox_w=item["bounding_box"]["width"],
-            bbox_h=item["bounding_box"]["height"]
-        )
-        db.add(db_ocr)
-    db.commit()
+    if ocr_raw:
+        for item in ocr_raw:
+            try:
+                db_ocr = OCRResult(
+                    product_image_id=db_image.id,
+                    text=item.get('text', ''),
+                    confidence=item.get('confidence', 0.0),
+                    bbox_x=item.get('bounding_box', {}).get('x', 0),
+                    bbox_y=item.get('bounding_box', {}).get('y', 0),
+                    bbox_w=item.get('bounding_box', {}).get('width', 0),
+                    bbox_h=item.get('bounding_box', {}).get('height', 0)
+                )
+                db.add(db_ocr)
+            except Exception as e:
+                pass
+        db.commit()
 
-    # 5. Extract declarations & Automatic Commodity Categorization
-    parsed_decls = parse_ocr_results(ocr_raw)
-    all_ocr_text = " ".join([item.get("text", "") for item in ocr_raw])
-    detected_name = parsed_decls.get("product_name", {}).get("value") or ""
+    # Extract declarations & Automatic Commodity Categorization
+    all_ocr_text = " ".join([item.get('text', '') for item in (ocr_raw or [])])
+    detected_name = parsed_decls.get('product_name', {}).get('value') or ''
     detected_category = classify_commodity(all_ocr_text, detected_name)
     
     if db_inspection.product:
-        if not db_inspection.product.name or db_inspection.product.name == "New Unidentified Package":
-            db_inspection.product.name = detected_name or "Packaged Commodity"
-        if not db_inspection.product.category or db_inspection.product.category == "General":
+        if not db_inspection.product.name or db_inspection.product.name == 'New Unidentified Package':
+            db_inspection.product.name = detected_name or 'Packaged Commodity'
+        if not db_inspection.product.category or db_inspection.product.category == 'General':
             db_inspection.product.category = detected_category
         db.commit()
     
     # Save or update parsed declarations
     for field_name, decl in parsed_decls.items():
+        if field_name == 'unsupported_language_detected':
+            continue
         existing = db.query(Declaration).filter(
             Declaration.inspection_id == inspection_id,
             Declaration.field_name == field_name
         ).first()
         
         if existing:
-            existing.value = decl["value"]
-            existing.status = decl["status"]
-            existing.confidence = decl["confidence"]
-            existing.original_text = decl["original_text"]
+            existing.value = decl.get('value', '')
+            existing.status = decl.get('status', 'MISSING')
+            existing.confidence = decl.get('confidence', 0.0)
+            existing.original_text = decl.get('original_text', '')
         else:
             db_decl = Declaration(
                 inspection_id=inspection_id,
                 field_name=field_name,
-                value=decl["value"],
-                status=decl["status"],
-                confidence=decl["confidence"],
-                original_text=decl["original_text"]
+                value=decl.get('value', ''),
+                status=decl.get('status', 'MISSING'),
+                confidence=decl.get('confidence', 0.0),
+                original_text=decl.get('original_text', '')
             )
             db.add(db_decl)
     db.commit()
 
-    # 6. Automated Geometric Scale & Rule 7/8 Dimension Calculations
-    import cv2
-    img_cv = cv2.imread(filepath)
-    scale_info = calculate_pdp_scale(img_cv) if img_cv is not None else {"pdp_area_cm2": 150.0, "scale_px_per_mm": 2.5}
-    
-    font_metrics = calculate_font_dimensions(
-        ocr_raw,
-        pdp_area_cm2=scale_info["pdp_area_cm2"],
-        scale_px_per_mm=scale_info["scale_px_per_mm"]
-    )
-    
-    qty_token = next((item for item in ocr_raw if any(k in item.get("text", "").lower() for k in ["net", "wt", "qty", "quantity"])), None)
-    qty_bbox = qty_token["bounding_box"] if qty_token else {}
-    all_bboxes = [item["bounding_box"] for item in ocr_raw]
-    numeral_h_px = font_metrics["measured_font_height_mm"] * scale_info["scale_px_per_mm"]
-    rule_8_eval = evaluate_rule_8_clearance(qty_bbox, all_bboxes, numeral_h_px)
-
-    # 7. Execute Consolidated 17 Legal Metrology Rules Engine
-    rule_outputs = evaluate_compliance(
-        parsed_decls,
-        pdp_area_cm2=scale_info["pdp_area_cm2"],
-        measured_font_height_mm=font_metrics["measured_font_height_mm"],
-        rule_8_clearance_status=rule_8_eval["status"]
-    )
-    
-    # Save or update compliance results in DB
-    for rule_res in rule_outputs["results"]:
-        existing_res = db.query(ComplianceResult).filter(
-            ComplianceResult.inspection_id == inspection_id,
-            ComplianceResult.rule_id == rule_res["rule_id"]
-        ).first()
-        
-        if existing_res:
-            existing_res.status = rule_res["status"]
-            existing_res.details = rule_res["details"]
-        else:
-            db_rule_res = ComplianceResult(
-                inspection_id=inspection_id,
-                rule_id=rule_res["rule_id"],
-                status=rule_res["status"],
-                details=rule_res["details"]
-            )
-            db.add(db_rule_res)
-            
-    # Update Inspection health overall status
-    db_inspection.status = rule_outputs["overall_status"]
+    # Update overall status
+    overall_status = compliance.get('overall_status', 'REQUIRES_REVIEW')
+    db_inspection.status = overall_status
     db.commit()
-    sync_inspection_fts(db, inspection_id)
-    
-    # Format bboxes for interactive visualizer
-    visualizer_boxes = []
-    for item in ocr_raw:
-        txt = item["text"].lower()
-        box_status = "PASS"
-        matched_field = "other"
-        
-        if any(k in txt for k in ["mrp", "rs", "₹", "price"]):
-            matched_field = "mrp"
-            mrp_rule = next((r for r in rule_outputs["results"] if r["field"] == "mrp"), None)
-            box_status = mrp_rule["status"] if mrp_rule else "PASS"
-        elif any(k in txt for k in ["net", "wt", "qty", "quantity", "weight"]):
-            matched_field = "net_quantity"
-            qty_rule = next((r for r in rule_outputs["results"] if r["field"] == "net_quantity"), None)
-            box_status = qty_rule["status"] if qty_rule else "PASS"
-        elif any(k in txt for k in ["pkd", "mfd", "packed", "date", "mfg"]):
-            matched_field = "packing_date"
-            date_rule = next((r for r in rule_outputs["results"] if r["field"] == "packing_date"), None)
-            box_status = date_rule["status"] if date_rule else "PASS"
-        elif any(k in txt for k in ["care", "customer", "call", "email", "helpline", "1800"]):
-            matched_field = "consumer_care"
-            care_rule = next((r for r in rule_outputs["results"] if r["field"] == "consumer_care"), None)
-            box_status = care_rule["status"] if care_rule else "PASS"
-        elif any(k in txt for k in ["mfd by", "manufactured", "marketed", "packed by", "imported"]):
-            matched_field = "manufacturer"
-            mfg_rule = next((r for r in rule_outputs["results"] if r["field"] == "manufacturer"), None)
-            box_status = mfg_rule["status"] if mfg_rule else "PASS"
-            
-        visualizer_boxes.append({
-            "text": item["text"],
-            "field": matched_field,
-            "confidence": item["confidence"],
-            "status": box_status,
-            "bbox": item["bounding_box"]
-        })
-    
+
+    # Log to Compliance Result
+    for res in compliance.get('results', []):
+        db_res = ComplianceResult(
+            inspection_id=inspection_id,
+            rule_id=res.get('rule_id'),
+            status=res.get('status'),
+            details=res.get('details')
+        )
+        db.add(db_res)
+    db.commit()
+
     return {
-        "status": rule_outputs["overall_status"],
-        "message": "Image processed. PaddleOCR / RapidOCR & 17 statutory compliance checks succeeded.",
-        "quality": quality_metrics,
-        "scale": scale_info,
-        "font_dimensions": font_metrics,
-        "rule_8_clearance": rule_8_eval,
-        "declarations": parsed_decls,
-        "rules_results": rule_outputs["results"],
-        "category": detected_category,
-        "bboxes": visualizer_boxes
+        'status': 'success',
+        'image_id': db_image.id,
+        'image_url': f'/uploads/{filename}',
+        'extracted_data': parsed_decls,
+        'compliance_report': compliance
     }
 
 @app.get("/inspections/{inspection_id}/pdf-report")
