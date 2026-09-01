@@ -397,41 +397,51 @@ export default function InspectionDetailScreen({
               </p>
             )}
 
-            {/* Quick Officer Decision Toggles */}
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-divider/40 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  const allPassed = rulesList.map(r => ({ ...r, status: 'PASS' }));
-                  setRulesList(allPassed);
-                  inspection.compliance_results = allPassed;
-                  inspection.status = 'COMPLIANT';
-                  setCurrentOverallStatus('COMPLIANT');
-                  setSavedSuccessMsg('All Statutory Rules marked as COMPLIANT & PASS');
-                  setTimeout(() => setSavedSuccessMsg(''), 2500);
-                }}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-success/15 hover:bg-success/25 text-success border border-success/30 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
-              >
-                <CheckCircle className="w-3.5 h-3.5" /> Pass All 17 Rules
-              </button>
+            {/* Officer Enforcement & Legal Action Panel */}
+            <div className="flex flex-col gap-2.5 mt-4 pt-4 border-t border-divider/40">
+              <span className="text-[11px] font-bold text-fg uppercase tracking-wider flex items-center gap-1.5">
+                <span>⚖️ Legal Metrology Officer Enforcement Actions</span>
+              </span>
+              <p className="text-[12px] text-fg-muted leading-relaxed">
+                As the inspecting officer under Section 15 & 39 of the Legal Metrology Act, 2009, record statutory enforcement action:
+              </p>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const marked = rulesList.map(r => r.status === 'PASS' ? r : ({ ...r, status: 'FAIL' }));
-                  setRulesList(marked);
-                  inspection.compliance_results = marked;
-                  inspection.status = 'NON_COMPLIANT';
-                  setCurrentOverallStatus('NON_COMPLIANT');
-                  setSavedSuccessMsg('Flagged unresolved items as Violations');
-                  setTimeout(() => setSavedSuccessMsg(''), 2500);
-                }}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-error/15 hover:bg-error/25 text-error border border-error/30 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
-              >
-                <AlertCircle className="w-3.5 h-3.5" /> Flag Violations
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allPassed = rulesList.map(r => ({ ...r, status: 'PASS' }));
+                    setRulesList(allPassed);
+                    inspection.compliance_results = allPassed;
+                    inspection.status = 'COMPLIANT';
+                    setCurrentOverallStatus('COMPLIANT');
+                    setSavedSuccessMsg('✓ Issued Legal Metrology Compliance Clearance (All Rules Validated)');
+                    setTimeout(() => setSavedSuccessMsg(''), 3000);
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-success text-on-accent hover:opacity-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
+                >
+                  <ShieldCheck className="w-4 h-4" /> Approve & Clear (Pass All)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const marked = rulesList.map(r => r.status === 'PASS' ? r : ({ ...r, status: 'FAIL' }));
+                    setRulesList(marked);
+                    inspection.compliance_results = marked;
+                    inspection.status = 'NON_COMPLIANT';
+                    setCurrentOverallStatus('NON_COMPLIANT');
+                    setSavedSuccessMsg('⚠️ Issued Form-1 Notice of Violation under Section 39');
+                    setTimeout(() => setSavedSuccessMsg(''), 3000);
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-error text-white hover:opacity-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
+                >
+                  <AlertCircle className="w-4 h-4" /> Issue Seizure Notice (Form-1)
+                </button>
+              </div>
             </div>
           </section>
+
 
           {/* Declarations table */}
           <section className="flex flex-col gap-3">

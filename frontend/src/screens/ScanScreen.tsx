@@ -48,14 +48,21 @@ const CATEGORIES = [
 export default function ScanScreen({
   videoRef, canvasRef, cameraActive, capturedImage, scannedImages = [],
   onAddImage, onRemoveImage, onClearImages, activeSide, setActiveSide,
-  isProcessing, processingStep, startCamera, stopCamera, capturePhoto,
+  isProcessing, processingStep, startCamera: _startCamera, stopCamera, capturePhoto,
+
   processImage, setCapturedImage, onBack, commodityName, setCommodityName,
   commodityCategory, setCommodityCategory, language = 'en'
 }: ScanScreenProps) {
-  const t = translations[language] || translations.en;
+  const t = (translations as any)[language] || translations.en;
   const [isDragging, setIsDragging] = useState(false);
+
+
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+
+
+
 
 
 
@@ -267,6 +274,19 @@ export default function ScanScreen({
 
             {/* Bottom Action Bar */}
             <div className="flex gap-2.5 p-4 bg-surface-elevated/40 border-t border-divider/50 flex-wrap">
+              {/* Native mobile camera capture */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) handleProcessFiles(e.target.files);
+                }}
+              />
+
+              {/* Multi-file gallery picker */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -278,24 +298,26 @@ export default function ScanScreen({
                 }}
               />
 
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 bg-accent text-on-accent font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform shadow-md shadow-accent/20 cursor-pointer"
-              >
-                <Upload className="w-4 h-4" />
-                <span>{hasPhotos ? "+ Add More Photos / Sides" : "Upload Package Photos"}</span>
-              </button>
-
               {!cameraActive ? (
-                <button
-                  type="button"
-                  onClick={() => startCamera()}
-                  className="bg-surface hover:bg-surface-elevated text-fg border border-divider font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform cursor-pointer"
-                >
-                  <Camera className="w-4 h-4 text-accent" />
-                  <span>{hasPhotos ? "Take Another Photo" : "Use Camera"}</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex-1 bg-accent text-on-accent font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform shadow-md shadow-accent/20 cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>{hasPhotos ? "+ Snap Another Side" : "📸 Snap Photo (Camera)"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-surface hover:bg-surface-elevated text-fg border border-divider font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs active:scale-95 transition-transform cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 text-accent" />
+                    <span>📁 Gallery / Files</span>
+                  </button>
+                </>
               ) : (
                 <>
                   <button
@@ -314,9 +336,12 @@ export default function ScanScreen({
                   </button>
                 </>
               )}
+
             </div>
           </section>
         </div>
+
+
 
         {/* Right Column: Commodity Info, Panel Switcher, Quality Checklist & Multi-Photo AI Verification (lg:col-span-5) */}
         <div className="lg:col-span-5 flex flex-col gap-4">
