@@ -98,11 +98,22 @@ def normalize_ocr_text(text: str) -> str:
 
 
 
+from .llm import parse_with_llm
+
 def parse_ocr_results(ocr_items: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Parses OCR text tokens into structured Legal Metrology statutory fields.
-    Applies Levenshtein-distance fuzzy matching with RapidFuzz for noisy packaging text.
+    Prioritizes LLM extraction as per PRD logic tree, falls back to Regex.
     """
+    full_text_combined = " ".join([item.get("text", "") for item in ocr_items])
+    avg_conf = sum(float(i.get("confidence", 0.0)) for i in ocr_items) / max(1, len(ocr_items))
+    
+    # --- 1. PRD Pipeline: Try LLM Extraction First ---
+    llm_results = parse_with_llm(full_text_combined, avg_conf)
+    if llm_results:
+        return llm_results
+
+    # --- 2. Fallback: Regex Pipeline ---
     results = {
         "mrp": {"value": "", "confidence": 0.0, "original_text": ""},
         "net_quantity": {"value": "", "confidence": 0.0, "original_text": ""},
@@ -210,6 +221,41 @@ def parse_ocr_results(ocr_items: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "confidence": conf,
                 "original_text": raw_text
             }
+
+    # --- FALLBACK: Match against fully joined text for fragmented bounding boxes ---
+    # Real OCR often splits "Net Quantity" and "1 kg" into separate bounding boxes.
+    # If line-by-line matching missed them, we search the joined normalized text.
+    full_text_norm = normalize_ocr_text(full_text_combined)
+    avg_conf = sum(float(i.get("confidence", 0.0)) for i in ocr_items) / max(1, len(ocr_items))
+
+    if not results["mrp"]["value"]:
+        m = MRP_PATTERN.search(full_text_norm)
+        if m: results["mrp"] = {"value": f"₹{m.group(1).strip().replace('O', '0').replace('o', '0')}", "confidence": avg_conf, "original_text": m.group(0)}
+    
+    if not results["net_quantity"]["value"]:
+        m = QTY_PATTERN.search(full_text_norm)
+        if m: results["net_quantity"] = {"value": f"{m.group(1).strip().replace('O', '0')} {m.group(2).strip().lower()}", "confidence": avg_conf, "original_text": m.group(0)}
+        
+    if not results["packing_date"]["value"]:
+        m = DATE_PATTERN.search(full_text_norm)
+        if m: results["packing_date"] = {"value": m.group(1).strip(), "confidence": avg_conf, "original_text": m.group(0)}
+        
+    if not results["best_before"]["value"]:
+        m = BEST_BEFORE_PATTERN.search(full_text_norm)
+        if m: results["best_before"] = {"value": m.group(0).strip(), "confidence": avg_conf, "original_text": m.group(0)}
+        
+    if not results["country_of_origin"]["value"]:
+        m = COO_PATTERN.search(full_text_norm)
+        if m: results["country_of_origin"] = {"value": m.group(1).strip().title(), "confidence": avg_conf, "original_text": m.group(0)}
+        
+    if not results["unit_sale_price"]["value"]:
+        m = USP_PATTERN.search(full_text_norm)
+        if m: results["unit_sale_price"] = {"value": f"₹{m.group(1).strip()}", "confidence": avg_conf, "original_text": m.group(0)}
+        
+    if not results["dimensions"]["value"]:
+        m = DIMENSIONS_PATTERN.search(full_text_norm)
+        if m: results["dimensions"] = {"value": m.group(1).strip(), "confidence": avg_conf, "original_text": m.group(0)}
+
 
     # Fuzzy Matching for Manufacturer / Packer (Rule 6(1)(a))
     mfg_keywords = ["mfd by", "manufactured by", "packed by", "marketed by", "imported by", "mfg. by", "pkd by", "packer"]
