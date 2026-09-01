@@ -16,6 +16,9 @@ import ProfileScreen from './screens/ProfileScreen';
 import ScanScreen from './screens/ScanScreen';
 import InspectionDetailScreen from './screens/InspectionDetailScreen';
 
+// Update this to your Render URL after deployment! (e.g., 'https://paarakhmetric-backend.onrender.com')
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 type Page = 'dashboard' | 'scan' | 'history' | 'inspection' | 'settings' | 'reports' | 'profile';
 
 const INITIAL_INSPECTIONS = [
@@ -239,7 +242,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUsername, password: cleanPassword, role: 'officer' })
@@ -302,7 +305,7 @@ export default function App() {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(`/api/inspections/search?${params.toString()}`, { headers });
+      const res = await fetch(`${API_BASE_URL}/api/inspections/search?${params.toString()}`, { headers });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -318,7 +321,7 @@ export default function App() {
     try {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      await fetch(`/api/inspections/${id}`, { method: 'DELETE', headers });
+      await fetch(`${API_BASE_URL}/api/inspections/${id}`, { method: 'DELETE', headers });
       setInspections(prev => prev.filter(i => i.id !== id));
       if (selectedInspectionId === id) {
         setSelectedInspectionId(null);
@@ -345,14 +348,14 @@ export default function App() {
     const item = queue[index];
 
     try {
-      const prodRes = await fetch('/api/products', {
+      const prodRes = await fetch(`${API_BASE_URL}/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: item.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "), category: "General" })
       });
       const prodData = await prodRes.json();
 
-      const inspRes = await fetch('/api/inspections', {
+      const inspRes = await fetch(`${API_BASE_URL}/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: prodData.id, location: "Batch Ingestion Depot", notes: `Batch file: ${item.name}` })
@@ -363,7 +366,7 @@ export default function App() {
       formData.append('panel_side', 'front');
       formData.append('file', item.file);
 
-      const upRes = await fetch(`/api/inspections/${inspData.id}/upload-image`, {
+      const upRes = await fetch(`${API_BASE_URL}/api/inspections/${inspData.id}/upload-image`, {
         method: 'POST', body: formData
       });
       const analysisData = await upRes.json();
@@ -482,7 +485,7 @@ export default function App() {
 
       setProcessingStep("Registering Inspection...");
       // 1. Create Product
-      const prodRes = await fetch('/api/products', {
+      const prodRes = await fetch(`${API_BASE_URL}/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: "Live Scanned Commodity", category: "General" })
@@ -490,7 +493,7 @@ export default function App() {
       const prodData = await prodRes.json();
 
       // 2. Create Inspection
-      const inspRes = await fetch('/api/inspections', {
+      const inspRes = await fetch(`${API_BASE_URL}/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: prodData.id, location: "Mobile Scanner", notes: "Live scan via frontend" })
@@ -504,7 +507,7 @@ export default function App() {
       formData.append('panel_side', activeSide);
       formData.append('file', file);
       
-      const upRes = await fetch(`/api/inspections/${inspData.id}/upload-image`, {
+      const upRes = await fetch(`${API_BASE_URL}/api/inspections/${inspData.id}/upload-image`, {
         method: 'POST',
         body: formData
       });
