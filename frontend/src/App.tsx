@@ -469,56 +469,87 @@ export default function App() {
     }
   };
 
-  const processImage = () => {
+  const processImage = async () => {
     if (!capturedImage) return;
     setIsProcessing(true);
+    setProcessingStep("Uploading to PaarakhMetric Pipeline...");
 
-    const steps = [
-      "Image Quality Check (Sharpness & Brightness)...",
-      "Correcting package perspective and deskewing...",
-      "Running PaddleOCR engine to locate text elements...",
-      "Extracting Legal Metrology declarations via Fuzzy Logic...",
-      "Executing Compliance Rule Engine matrix..."
-    ];
+    try {
+      // Convert base64 to blob
+      const res = await fetch(capturedImage);
+      const blob = await res.blob();
+      const file = new File([blob], 'scan.jpg', { type: 'image/jpeg' });
 
-    let currentStepIndex = 0;
-    setProcessingStep(steps[0]);
+      setProcessingStep("Registering Inspection...");
+      // 1. Create Product
+      const prodRes = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: "Live Scanned Commodity", category: "General" })
+      });
+      const prodData = await prodRes.json();
 
-    const interval = setInterval(() => {
-      currentStepIndex++;
-      if (currentStepIndex < steps.length) {
-        setProcessingStep(steps[currentStepIndex]);
-      } else {
-        clearInterval(interval);
-        setIsProcessing(false);
-        const newInspId = Date.now();
-        const newRecord = {
-          id: newInspId,
-          product: { name: "Scanned Packaged Commodity", manufacturer: "Snacko Foods", category: "Snacks", barcode: "8905678123456" },
-          timestamp: new Date().toISOString(),
-          status: "REQUIRES_REVIEW",
-          location: "Terminal Store, Delhi",
-          officer: user?.name || user?.username || "Officer Shrey",
-          declarations: [
-            { field_name: "mrp", value: "₹40.00", status: "VALIDATED", confidence: 0.94, original_text: "MRP Rs 40.00" },
-            { field_name: "net_quantity", value: "85 g", status: "VALIDATED", confidence: 0.92, original_text: "NET WT 85g" },
-            { field_name: "manufacturer", value: "Snacko Foods Pvt Ltd", status: "VALIDATED", confidence: 0.89, original_text: "Made in India by Snacko Foods Ltd" },
-            { field_name: "packing_date", value: "08/2026", status: "VALIDATED", confidence: 0.91, original_text: "Packed 08/26" },
-            { field_name: "consumer_care", value: "1800-456-789", status: "VALIDATED", confidence: 0.54, original_text: "Care? Call 1800-456-789?" }
-          ],
-          compliance_results: [
-            { rule_id: "PC-MRP-001", field: "mrp", status: "PASS", details: "MRP detected and verified" },
-            { rule_id: "PC-QTY-002", field: "net_quantity", status: "PASS", details: "Net quantity is declared in standard units (g)" },
-            { rule_id: "PC-DATE-003", field: "packing_date", status: "PASS", details: "Packing date present" },
-            { rule_id: "PC-CARE-004", field: "consumer_care", status: "REVIEW", details: "Low confidence OCR match for Consumer Care. Manual review recommended." }
-          ],
-          notes: "Helpline text slightly obscured by wrinkle on bag."
-        };
-        setInspections(prev => [newRecord, ...prev]);
-        setSelectedInspectionId(newInspId);
-        setCurrentPage('inspection');
+      // 2. Create Inspection
+      const inspRes = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: prodData.id, location: "Mobile Scanner", notes: "Live scan via frontend" })
+      });
+      const inspData = await inspRes.json();
+
+      setProcessingStep("Executing YOLO-Seg & Vision LLM...");
+      
+      // 3. Upload Image
+      const formData = new FormData();
+      formData.append('panel_side', activeSide);
+      formData.append('file', file);
+      
+      const upRes = await fetch(`/api/inspections/${inspData.id}/upload-image`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!upRes.ok) {
+        throw new Error(`Upload failed: ${upRes.statusText}`);
       }
-    }, 1200);
+      
+      const analysisData = await upRes.json();
+      
+      // Transform response to match frontend state
+      const decls = Object.keys(analysisData.extracted_data || {}).map(key => {
+         const d = analysisData.extracted_data[key];
+         return {
+             field_name: key,
+             value: d.value || "",
+             status: d.confidence > 0.85 ? "VALIDATED" : (d.value ? "POTENTIAL_VIOLATION" : "MISSING"),
+             confidence: d.confidence || 0,
+             original_text: d.original_text || ""
+         };
+      });
+      
+      const newRecord = {
+        id: inspData.id,
+        product: { name: "Live Scanned Commodity", manufacturer: "Extracted via LLM", category: "General" },
+        timestamp: new Date().toISOString(),
+        status: analysisData.compliance_report?.overall_status || "REQUIRES_REVIEW",
+        location: "Mobile Scanner",
+        officer: user?.name || user?.username || "Officer Shrey",
+        declarations: decls,
+        compliance_results: analysisData.compliance_report?.results || [],
+        notes: "Live scan executed via backend pipeline.",
+        image_url: analysisData.image_url
+      };
+      
+      setInspections(prev => [newRecord, ...prev]);
+      setSelectedInspectionId(inspData.id);
+      setCurrentPage('inspection');
+
+    } catch (err) {
+      console.error(err);
+      alert("Pipeline failed. Make sure backend is running on 8000.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // ============================================================
