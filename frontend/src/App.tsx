@@ -162,7 +162,16 @@ export default function App() {
   const [categoryFilter, _setCategoryFilter] = useState<string>('ALL');
 
   // --- Language ---
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('paarakhmetric_language');
+    if (saved === 'hi' || saved === 'kn' || saved === 'en') return saved;
+    return 'en';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('paarakhmetric_language', language);
+  }, [language]);
+
 
   // --- Theme ---
   const [theme, setTheme] = useState<string>(() => localStorage.getItem('paarakhmetric_theme') || 'civic-ledger');
@@ -653,7 +662,12 @@ export default function App() {
   // Main tabbed layout
   return (
     <>
-      <Layout currentPage={currentPage} onPageChange={(p) => setCurrentPage(p as Page)}>
+      <Layout 
+        currentPage={currentPage} 
+        onPageChange={(p) => setCurrentPage(p as Page)}
+        language={language}
+        setLanguage={setLanguage}
+      >
         {currentPage === 'dashboard' && (
           <DashboardScreen
             stats={stats}
@@ -692,9 +706,12 @@ export default function App() {
             currentTheme={theme}
             setTheme={setTheme}
             onUpdateUser={setUser}
+            language={language}
+            setLanguage={setLanguage}
           />
         )}
       </Layout>
+
 
       {/* FAB - only on dashboard and history tabs */}
       {(currentPage === 'dashboard' || currentPage === 'history') && (

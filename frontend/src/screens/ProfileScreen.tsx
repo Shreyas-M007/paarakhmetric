@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Landmark, Moon, Sun, Contrast, X, Check, Phone, Mail, Award, CheckCircle2 } from 'lucide-react';
+import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Landmark, Moon, Sun, Contrast, X, Check, Phone, Mail, Award, CheckCircle2, Globe } from 'lucide-react';
 import StatGrid from '../components/StatGrid';
+import { Language } from '../i18n';
 
 interface ProfileScreenProps {
   user: any;
@@ -8,11 +9,14 @@ interface ProfileScreenProps {
   currentTheme: string;
   setTheme: (theme: string) => void;
   onUpdateUser?: (updated: any) => void;
+  language?: Language;
+  setLanguage?: (lang: Language) => void;
 }
 
-export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, onUpdateUser }: ProfileScreenProps) {
-  const [view, setView] = useState<'profile' | 'theme'>('profile');
+export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, onUpdateUser, language = 'en', setLanguage }: ProfileScreenProps) {
+  const [view, setView] = useState<'profile' | 'theme' | 'language'>('profile');
   const [activeModal, setActiveModal] = useState<'edit' | 'permissions' | 'support' | null>(null);
+
   
   // Profile edit form state
   const [name, setName] = useState(user?.name || user?.username || 'Officer Shrey');
@@ -115,14 +119,68 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
     );
   }
 
+  if (view === 'language') {
+    const langOptions = [
+      { id: 'en' as Language, symbol: 'A', label: 'English', desc: 'Default system interface' },
+      { id: 'hi' as Language, symbol: 'अ', label: 'हिन्दी (Hindi)', desc: 'कानूनी माप विज्ञान एवं अनुपालन' },
+      { id: 'kn' as Language, symbol: 'ಅ', label: 'ಕನ್ನಡ (Kannada)', desc: 'ಕಾನೂನು ಮಾಪನಶಾಸ್ತ್ರ ಅನುಸರಣೆ' },
+    ];
+
+    return (
+      <div className="flex flex-col gap-6">
+        <section className="flex items-center gap-3">
+          <button onClick={() => setView('profile')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="font-display text-[28px] leading-[32px] font-bold m-0">Language / भाषा</h1>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-semibold">Select language</span>
+          <div className="flex flex-col gap-3">
+            {langOptions.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => {
+                  if (setLanguage) setLanguage(opt.id);
+                  setView('profile');
+                }}
+                className={`flex items-center gap-3 bg-surface rounded-2xl p-5 text-left w-full transition-all hover:bg-surface-elevated active:scale-99 border ${
+                  language === opt.id ? 'border-accent bg-accent/5' : 'border-divider'
+                }`}
+              >
+                <span className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-surface-recessed text-accent font-bold text-lg">
+                  {opt.symbol}
+                </span>
+                <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="text-[16px] font-semibold text-fg">{opt.label}</span>
+                  <span className="text-[13px] text-fg-muted">{opt.desc}</span>
+                </span>
+                {language === opt.id && (
+                  <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <section className="flex items-center justify-between gap-3">
         <h1 className="font-display text-[32px] leading-[32px] font-bold m-0">Profile</h1>
-        <button onClick={() => setView('theme')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0" title="Theme Settings">
-          <Settings className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setView('language')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0" title="Language Settings">
+            <Globe className="w-5 h-5" />
+          </button>
+          <button onClick={() => setView('theme')} className="w-10 h-10 rounded-full bg-surface text-fg flex items-center justify-center transition-colors hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-fg focus-visible:outline-offset-2 active:scale-95 flex-shrink-0" title="Theme Settings">
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
       </section>
+
 
       <section className="bg-surface rounded-2xl p-6 flex flex-col items-center gap-4 text-center">
         <div className="w-[88px] h-[88px] rounded-full bg-surface-recessed flex items-center justify-center text-fg font-display text-[32px] font-bold">

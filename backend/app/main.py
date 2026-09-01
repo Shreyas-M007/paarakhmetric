@@ -573,9 +573,27 @@ def get_rules(db: Session = Depends(get_db)):
         "applies_to": r.applies_to
     } for r in rules]
 
+# Automatically mirror all API routes under the /api prefix for frontend compatibility
+from fastapi import APIRouter
+api_router = APIRouter(prefix="/api")
+for r in list(app.routes):
+    if hasattr(r, "endpoint") and not r.path.startswith("/api"):
+        api_router.add_api_route(
+            r.path,
+            r.endpoint,
+            methods=getattr(r, "methods", ["GET"]),
+            response_model=getattr(r, "response_model", None),
+            status_code=getattr(r, "status_code", None),
+            tags=getattr(r, "tags", None),
+            summary=getattr(r, "summary", None),
+            description=getattr(r, "description", None),
+        )
+app.include_router(api_router)
+
 # Serve frontend build if present
 from fastapi.staticfiles import StaticFiles
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../frontend/dist"))
 if os.path.exists(frontend_dist):
     app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+
 
