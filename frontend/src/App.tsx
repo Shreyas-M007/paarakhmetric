@@ -254,8 +254,9 @@ Return JSON ONLY matching this schema:
   ]
 }`;
 
-  const models = ['gemini-3.6-flash', 'gemini-2.5-flash'];
+  const models = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.6-flash'];
   let lastError: any = null;
+
 
   for (const model of models) {
     try {
