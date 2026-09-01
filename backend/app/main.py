@@ -587,6 +587,46 @@ def get_pdf_report(inspection_id: int, db: Session = Depends(get_db)):
         
     return FileResponse(pdf_path, media_type="application/pdf", filename=f"PaarakhMetric_Report_{inspection_id}.pdf")
 
+from pydantic import BaseModel
+from app.extraction.llm import analyze_multimodal_package_images
+
+class MultiImageVisionRequest(BaseModel):
+    images: List[str]
+    product_name: Optional[str] = ""
+    category: Optional[str] = ""
+
+@app.post("/inspections/analyze-images")
+@app.post("/api/v1/inspections/analyze-images")
+def analyze_images_proxy(payload: MultiImageVisionRequest):
+    """
+    Cloud Server-Side Multi-Image Gemini Vision Proxy.
+    Takes photos from any client device, calls Gemini Vision securely using the server's GEMINI_API_KEY,
+    and returns statutory declarations and LMPC compliance results.
+    """
+    if not payload.images:
+        raise HTTPException(status_code=400, detail="No images provided for analysis")
+
+    result = analyze_multimodal_package_images(
+        images_base64=payload.images,
+        product_name=payload.product_name or "",
+        category=payload.category or ""
+    )
+
+    if not result.get("success", False):
+        raise HTTPException(status_code=500, detail=result.get("error", "Vision AI analysis failed"))
+
+    return result
+
+@app.get("/vision-status")
+@app.get("/api/v1/vision-status")
+def get_vision_status():
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    return {
+        "status": "ready" if api_key else "missing_key",
+        "has_key": bool(api_key),
+        "message": "Cloud Gemini Vision Server active" if api_key else "Server requires GEMINI_API_KEY environment variable"
+    }
+
 @app.get("/rules")
 def get_rules(db: Session = Depends(get_db)):
     """Retrieve all 17 statutory Legal Metrology rules from the database."""
@@ -604,6 +644,7 @@ def get_rules(db: Session = Depends(get_db)):
         "source": r.source,
         "applies_to": r.applies_to
     } for r in rules]
+
 
 # Automatically mirror all API routes under the /api prefix for frontend compatibility
 from fastapi import APIRouter

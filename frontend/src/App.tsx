@@ -749,9 +749,39 @@ export default function App() {
       let extractedManufacturer = "Detected Manufacturer";
       let finalProductName = chosenName;
 
-      // 1. If Gemini Vision API Key is present, run Direct Multimodal Vision AI across all photos!
-      if (geminiApiKey && geminiApiKey.trim().length > 5) {
-        setProcessingStep(`Executing Gemini 3.5 Flash Vision AI on ${imagesToAnalyze.length} photo(s)...`);
+      // 1. First Priority: Call Cloud Server-Side Gemini Vision Proxy (Works for all devices automatically!)
+      setProcessingStep(`Executing Cloud AI Vision on ${imagesToAnalyze.length} photo(s)...`);
+
+      try {
+        const proxyRes = await apiCall('/inspections/analyze-images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            images: imagesToAnalyze,
+            product_name: chosenName,
+            category: chosenCat
+          })
+        });
+
+        if (proxyRes.ok) {
+          const serverResult = await proxyRes.json();
+          if (serverResult && (serverResult.declarations || serverResult.compliance_results)) {
+            decls = serverResult.declarations || [];
+            rulesResults = serverResult.compliance_results || [];
+            overallStatus = serverResult.overall_status || "COMPLIANT";
+            if (serverResult.manufacturer) extractedManufacturer = serverResult.manufacturer;
+            if (serverResult.product_name && !commodityName.trim()) {
+              finalProductName = serverResult.product_name;
+            }
+          }
+        }
+      } catch (proxyErr) {
+        console.warn("Cloud server AI proxy call failed, attempting direct route:", proxyErr);
+      }
+
+      // 2. Second Priority: Direct client-side Gemini Vision if custom key provided
+      if (decls.length === 0 && geminiApiKey && geminiApiKey.trim().length > 5) {
+        setProcessingStep(`Executing Direct Gemini Vision AI on ${imagesToAnalyze.length} photo(s)...`);
         try {
           const geminiResult = await runGeminiVisionAnalysis(geminiApiKey, imagesToAnalyze, chosenName, chosenCat);
           if (geminiResult) {
@@ -764,12 +794,10 @@ export default function App() {
             }
           }
         } catch (geminiErr: any) {
-          console.warn("Gemini Vision direct call failed:", geminiErr);
-          if (geminiErr?.message && (geminiErr.message.includes('leaked') || geminiErr.message.includes('key') || geminiErr.message.includes('403'))) {
-            alert(`⚠️ Google Gemini Vision Notice:\n${geminiErr.message}\n\nPlease click "AI Vision Key" to connect your fresh free API key from Google AI Studio.`);
-          }
+          console.warn("Direct Gemini Vision call failed:", geminiErr);
         }
       }
+
 
 
 
