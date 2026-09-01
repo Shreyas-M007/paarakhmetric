@@ -13,7 +13,10 @@ interface ProfileScreenProps {
   onUpdateUser?: (updated: any) => void;
   language?: Language;
   setLanguage?: (lang: Language) => void;
+  geminiApiKey?: string;
+  onSaveGeminiKey?: (key: string) => void;
 }
+
 
 const INDIC_LANGUAGES_CATALOG = [
   { code: 'hi', name: 'हिन्दी (Hindi)', script: 'Devanagari', ocrStatus: 'Active', accuracy: '98.5%' },
@@ -25,12 +28,14 @@ const INDIC_LANGUAGES_CATALOG = [
   { code: 'gu', name: 'ગુજરાતી (Gujarati)', script: 'Gujarati', ocrStatus: 'Active', accuracy: '96.8%' },
   { code: 'ml', name: 'മലയാളം (Malayalam)', script: 'Malayalam', ocrStatus: 'Active', accuracy: '96.5%' },
   { code: 'pa', name: 'ਪੰਜਾਬੀ (Punjabi)', script: 'Gurmukhi', ocrStatus: 'Active', accuracy: '96.2%' },
-  { code: 'or', name: 'ଓଡ଼ିଆ (Odia)', script: 'Odia', ocrStatus: 'Active', accuracy: '95.9%' },
+  { code: 'or', name: 'ଓଡ଼િଆ (Odia)', script: 'Odia', ocrStatus: 'Active', accuracy: '95.9%' },
   { code: 'as', name: 'অসমীয়া (Assamese)', script: 'Eastern Nagari', ocrStatus: 'Active', accuracy: '95.7%' },
   { code: 'en', name: 'English', script: 'Latin', ocrStatus: 'Active', accuracy: '99.4%' }
 ];
 
-export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, onUpdateUser, language = 'en', setLanguage }: ProfileScreenProps) {
+export default function ProfileScreen({ 
+  user, onLogout, currentTheme, setTheme, onUpdateUser, language = 'en', setLanguage, geminiApiKey = '', onSaveGeminiKey 
+}: ProfileScreenProps) {
   const [view, setView] = useState<'profile' | 'theme' | 'language'>('profile');
   const [activeModal, setActiveModal] = useState<'edit' | 'permissions' | 'support' | null>(null);
   const t = translations[language] || translations.en;
@@ -41,6 +46,15 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
   const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
   const [region, setRegion] = useState(user?.region || 'New Delhi NCR');
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Gemini API state
+  const [apiKeyInput, setApiKeyInput] = useState(geminiApiKey);
+  const [keySaved, setKeySaved] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
+  useEffect(() => {
+    setApiKeyInput(geminiApiKey);
+  }, [geminiApiKey]);
 
   useEffect(() => {
     if (user) {
@@ -295,6 +309,74 @@ export default function ProfileScreen({ user, onLogout, currentTheme, setTheme, 
                 <Globe className="w-4 h-4 text-accent" />
                 <span>{language === 'hi' ? 'इंटरफ़ेस भाषा बदलें' : language === 'kn' ? 'ಭಾಷೆಯನ್ನು ಬದಲಾಯಿಸಿ' : 'Switch Interface Language'}</span>
               </button>
+            </div>
+          </section>
+
+          {/* Google Gemini Vision AI Configuration */}
+          <section className="bg-surface rounded-2xl p-6 border border-divider/60 flex flex-col gap-4 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center font-bold text-xs">AI</span>
+                <div>
+                  <h3 className="font-display text-base font-bold text-fg m-0">Google Gemini Vision OCR</h3>
+                  <span className="text-[11px] text-fg-muted">Multimodal Deep Vision Label Recognition</span>
+                </div>
+              </div>
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                apiKeyInput ? 'text-success bg-success/10 border-success/20' : 'text-warning bg-warning/10 border-warning/20'
+              }`}>
+                {apiKeyInput ? '● Connected' : '○ Offline Mode'}
+              </span>
+            </div>
+
+            <p className="text-xs text-fg-muted leading-relaxed">
+              Connect your Google Gemini API key to run real-time Vision AI directly on uploaded package photos (extracts precise MRP, Net Qty, Dates, and Manufacturer details).
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showKey ? "text" : "password"}
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    placeholder="Paste your Gemini API Key (AIzaSy...)"
+                    className="w-full bg-surface-elevated border border-divider rounded-xl px-3.5 py-2.5 text-xs text-fg font-mono outline-none focus:border-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-fg-muted hover:text-fg uppercase tracking-wider"
+                  >
+                    {showKey ? "Hide" : "Show"}
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSaveGeminiKey) onSaveGeminiKey(apiKeyInput.trim());
+                    setKeySaved(true);
+                    setTimeout(() => setKeySaved(false), 2000);
+                  }}
+                  className="bg-accent text-on-accent px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow active:scale-95 transition-transform cursor-pointer"
+                >
+                  {keySaved ? <Check className="w-3.5 h-3.5" /> : null}
+                  {keySaved ? 'Saved!' : 'Save Key'}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-fg-muted pt-1">
+                <span>Free tier supported with Gemini 2.5 Flash</span>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent hover:underline font-semibold"
+                >
+                  Get free key at Google AI Studio ↗
+                </a>
+              </div>
             </div>
           </section>
 

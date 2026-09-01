@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check, Upload } from 'lucide-react';
+import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check, Upload, ZoomIn, Maximize2 } from 'lucide-react';
 import { computeRuleTally } from '../utils/mapInspection';
-
-
 import { Language, translations, getStatusTranslation, getDeclarationFieldTranslation, getCategoryTranslation } from '../i18n';
 
 interface InspectionDetailScreenProps {
@@ -38,10 +36,11 @@ export default function InspectionDetailScreen({
   const [prodCategory, setProdCategory] = useState(inspection.product?.category || 'General');
 
   const [imageError, setImageError] = useState(false);
+  const [showZoomModal, setShowZoomModal] = useState(false);
 
   const t = translations[language] || translations.en;
 
-  const displayImage = (!imageError && (capturedImage || inspection.image_url)) || capturedImage;
+  const displayImage = (!imageError && (inspection.image_url || capturedImage)) || null;
 
   // Ensure default statutory rules if empty
   const complianceResults = (inspection.compliance_results && inspection.compliance_results.length > 0)
@@ -130,7 +129,7 @@ export default function InspectionDetailScreen({
                     setProdCategory(inspection.product?.category || 'General');
                     setIsEditingProduct(true);
                   }}
-                  className="p-1 text-fg-muted hover:text-accent rounded transition-colors"
+                  className="p-1 text-fg-muted hover:text-accent rounded transition-colors cursor-pointer"
                   title="Rename product / change category"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -234,23 +233,32 @@ export default function InspectionDetailScreen({
             </div>
 
             {/* Resilient Package Photo Display */}
-            <div className="relative aspect-square bg-surface-recessed flex items-center justify-center mx-4 mb-4 rounded-xl overflow-hidden border border-divider/40">
-              {displayImage && !imageError ? (
-                <img 
-                  src={displayImage} 
-                  alt={inspection.product?.name || "Captured Package"} 
-                  className="w-full h-full object-contain"
-                  onError={() => setImageError(true)}
-                />
+            <div className="relative aspect-square bg-surface-recessed flex items-center justify-center mx-4 mb-3 rounded-xl overflow-hidden border border-divider/40 group">
+              {displayImage ? (
+                <>
+                  <img 
+                    src={displayImage} 
+                    alt={inspection.product?.name || "Captured Package"} 
+                    className="w-full h-full object-contain cursor-zoom-in"
+                    onClick={() => setShowZoomModal(true)}
+                    onError={() => setImageError(true)}
+                  />
+                  <button
+                    onClick={() => setShowZoomModal(true)}
+                    className="absolute bottom-2 right-2 bg-black/70 hover:bg-black text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-lg transition-opacity cursor-pointer opacity-80 hover:opacity-100"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-accent" /> Full View
+                  </button>
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center text-fg-muted p-5 text-center w-full h-full bg-surface-elevated/40">
-                  <div className="relative w-40 h-32 border-2 border-dashed border-accent/50 rounded-xl p-2.5 flex flex-col justify-between bg-surface/60 mb-3 shadow-inner">
+                  <div className="relative w-44 h-32 border-2 border-dashed border-accent/50 rounded-xl p-2.5 flex flex-col justify-between bg-surface/60 mb-3 shadow-inner">
                     <div className="flex justify-between items-center text-[9px] font-mono text-accent font-bold">
                       <span className="bg-accent/15 px-1 rounded">PDP-01</span>
                       <span className="bg-success/15 text-success px-1 rounded">VERIFIED</span>
                     </div>
-                    <div className="flex flex-col gap-1 text-left">
-                      <span className="text-[10px] font-bold text-fg truncate">
+                    <div className="flex flex-col gap-0.5 text-left">
+                      <span className="text-[11px] font-bold text-fg truncate">
                         {inspection.product?.name || 'Packaged Commodity'}
                       </span>
                       <span className="text-[9px] font-mono text-fg-muted">
@@ -263,35 +271,39 @@ export default function InspectionDetailScreen({
                     </div>
                   </div>
 
-                  <label className="bg-accent text-on-accent text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95 transition-transform">
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>{language === 'hi' ? 'फोटो अपलोड करें' : language === 'kn' ? 'ಫೋಟೋ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ' : 'Attach Label Photo'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            if (reader.result) {
-                              setImageError(false);
-                              inspection.image_url = reader.result as string;
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                  </label>
-                  <span className="text-[10px] text-fg-muted mt-1.5">
-                    {language === 'hi' ? 'एआई सीमांकन बॉक्स और घोषणाएं सक्रिय हैं' : language === 'kn' ? 'AI ಬೌಂಡಿಂಗ್ ಬಾಕ್ಸ್ ಸಕ್ರಿಯವಾಗಿದೆ' : 'AI vision blueprint active'}
-                  </span>
+                  <span className="text-[10px] text-fg-muted">AI Vision Blueprint active</span>
                 </div>
               )}
             </div>
 
+            {/* Attach or Replace Photo Button */}
+            <div className="px-4 pb-4">
+              <label className="w-full bg-surface-elevated hover:bg-surface border border-divider text-fg font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 text-xs cursor-pointer active:scale-95 transition-transform">
+                <Upload className="w-3.5 h-3.5 text-accent" />
+                <span>{displayImage ? (language === 'hi' ? 'फोटो बदलें' : language === 'kn' ? 'ಫೋಟೋ ಬದಲಾಯಿಸಿ' : 'Replace / Re-upload Photo') : (language === 'hi' ? 'फोटो संलग्न करें' : language === 'kn' ? 'ಫೋಟೋ ಲಗತ್ತಿಸಿ' : 'Attach Package Photo')}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (reader.result) {
+                          setImageError(false);
+                          inspection.image_url = reader.result as string;
+                          if (onUpdateProduct) {
+                            onUpdateProduct(inspection.id, inspection.product?.name, inspection.product?.category);
+                          }
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            </div>
           </section>
         </div>
 
@@ -392,7 +404,7 @@ export default function InspectionDetailScreen({
                       <span className="text-[14px] font-semibold text-fg truncate">
                         {rule.rule_id} · {getDeclarationFieldTranslation(rule.field || '', language)}
                       </span>
-                      <span className="text-[13px] text-fg-muted truncate">{rule.details}</span>
+                      <span className="text-[13px] text-fg-muted">{rule.details}</span>
                     </div>
                     <span className={`flex-shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${ruleStatusColor}`}>
                       <span className="w-1.5 h-1.5 rounded-full bg-current" />{ruleStatusLabel}
@@ -404,6 +416,33 @@ export default function InspectionDetailScreen({
           </section>
         </div>
       </div>
+
+      {/* Fullscreen High-Resolution Zoom Lightbox Modal */}
+      {showZoomModal && displayImage && (
+        <div 
+          className="fixed inset-0 z-[250] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4"
+          onClick={() => setShowZoomModal(false)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex flex-col items-center gap-3" onClick={e => e.stopPropagation()}>
+            <div className="w-full flex items-center justify-between text-white pb-2 border-b border-white/10">
+              <span className="font-bold text-sm flex items-center gap-2">
+                <ZoomIn className="w-4 h-4 text-accent" /> {inspection.product?.name || 'Package Label Photo'}
+              </span>
+              <button 
+                onClick={() => setShowZoomModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <img 
+              src={displayImage} 
+              alt={inspection.product?.name || "High resolution inspection view"} 
+              className="max-h-[80vh] w-auto object-contain rounded-xl shadow-2xl border border-white/10"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
