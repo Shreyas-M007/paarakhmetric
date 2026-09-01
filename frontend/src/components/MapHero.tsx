@@ -45,11 +45,6 @@ export default function MapHero({
         </div>
       </div>
       
-      {/* Decorative arc */}
-      <svg className="absolute z-10 inset-x-5 top-5 h-[120px] pointer-events-none" viewBox="0 0 353 120" preserveAspectRatio="none">
-        <path d="M 10,100 Q 176,10 343,100" fill="none" stroke="var(--gesso-fg)" strokeOpacity="0.18" strokeWidth="1" strokeDasharray="2 6"></path>
-        <path d="M 10,100 Q 176,10 343,100" fill="none" stroke="var(--gesso-accent)" strokeWidth="2" strokeLinecap="round" style={{strokeDasharray: 220, strokeDashoffset: 0}}></path>
-      </svg>
       
       {/* Bottom metric */}
       <div className="relative z-10 p-5 flex flex-col gap-3 text-white">
