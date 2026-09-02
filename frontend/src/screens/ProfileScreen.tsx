@@ -340,9 +340,22 @@ export default function ProfileScreen({
                 </span>
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                   <span className="text-[15px] font-semibold text-fg">{t.rolePermissions}</span>
-                  <span className="text-[12px] text-fg-muted">{t.rolePermissionsSub}</span>
+                  <span className="text-[12px] text-fg-muted">
+                    {user?.username === 'shreyas'
+                      ? 'District Collector · Apex Section 39 Executive Rights'
+                      : user?.username === 'harsha'
+                      ? 'Assistant Collector · Administrative & Compounding Rights'
+                      : user?.username === 'sriraj'
+                      ? 'Senior Inspector · Supervisory & Lab Referral Rights'
+                      : user?.username === 'spandana'
+                      ? 'Legal Metrology Officer · North Division L3 Inspection Rights'
+                      : user?.username === 'sharath_gowda'
+                      ? 'Legal Metrology Officer · South Division L3 Inspection Rights'
+                      : `${user?.designation || 'Legal Metrology Officer'} · ${user?.role === 'controller' ? 'Apex Executive Rights' : user?.role === 'supervisor' ? 'Supervisory Rights' : 'Field Inspection Rights'}`}
+                  </span>
                 </span>
               </button>
+
               
               <button 
                 onClick={() => setActiveModal('support')}

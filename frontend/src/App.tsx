@@ -516,7 +516,21 @@ export default function App() {
     }
   };
 
+  // Cross-device sync: refresh inspections whenever the user switches views
+  useEffect(() => {
+    fetchInspections();
+  }, [currentPage]);
+
+  // Periodic real-time cross-device background sync (every 10 seconds)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchInspections();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   const _handleDeleteInspection = async (id: number) => {
+
     try {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -903,7 +917,9 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newRecord)
-      }).catch(e => console.warn("Backend cloud sync error:", e));
+      })
+      .then(() => fetchInspections())
+      .catch(e => console.warn("Backend cloud sync error:", e));
 
     } catch (err: any) {
       console.warn("Activating intelligent offline inspection mode with captured photo:", err);
@@ -943,6 +959,15 @@ export default function App() {
       setSelectedInspectionId(offlineId);
       setCommodityName('');
       setCurrentPage('inspection');
+
+      apiCall('/inspections/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fallbackRecord)
+      })
+      .then(() => fetchInspections())
+      .catch(e => console.warn("Backend cloud sync error:", e));
+
     } finally {
       setIsProcessing(false);
     }

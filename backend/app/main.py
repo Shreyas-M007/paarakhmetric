@@ -65,6 +65,7 @@ def format_inspection_summary(insp: Inspection, match_score: float = 100.0) -> d
             "url": f"/uploads/{img.filename}" if not img.filepath.startswith("data:") else img.filepath,
             "panel": img.panel_side
         })
+    primary_img = images[0]["url"] if images else None
     return {
         "id": insp.id,
         "product": {
@@ -76,13 +77,15 @@ def format_inspection_summary(insp: Inspection, match_score: float = 100.0) -> d
         "timestamp": insp.timestamp.isoformat() if insp.timestamp else "",
         "status": insp.status,
         "location": insp.location or "Field Store",
-        "officer": "Legal Metrology Officer",
+        "officer": insp.officer.full_name if (insp.officer and insp.officer.full_name) else "Legal Metrology Officer",
         "declarations": decls,
         "compliance_results": rules,
         "notes": insp.notes or "",
         "images": images,
+        "image_url": primary_img,
         "match_score": round(match_score, 1)
     }
+
 
 @app.on_event("startup")
 def on_startup():
@@ -512,7 +515,17 @@ def sync_inspection(payload: dict, db: Session = Depends(get_db)):
             )
             db.add(pimg)
             
+    if payload.get("image_url") and not payload.get("images"):
+        pimg = ProductImage(
+            inspection_id=insp.id,
+            filename=f"scan_{insp.id}_front.jpg",
+            filepath=payload.get("image_url"),
+            panel_side="front"
+        )
+        db.add(pimg)
+            
     db.commit()
+
     sync_inspection_fts(db, insp.id)
     return format_inspection_summary(insp)
 

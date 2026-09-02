@@ -8,7 +8,10 @@ export interface Inspection {
   status: 'COMPLIANT' | 'NON_COMPLIANT' | 'REVIEW';
   timeInfo: string;
   iconType?: string;
+  image_url?: string;
+  images?: any[];
 }
+
 
 interface InspectionListProps {
   title?: string;
