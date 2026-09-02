@@ -241,9 +241,13 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const clean = parsed.filter((i: any) => ![8042, 8041, 8040, 8039, 8038].includes(Number(i.id)));
+          const clean = parsed.filter((i: any) => {
+            const title = (i.product?.name || i.title || '').toLowerCase();
+            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m)) && ![8042, 8041, 8040, 8039, 8038, 1, 2, 3, 4, 5].includes(Number(i.id));
+          });
           return clean;
         }
+
       } catch {}
     }
     return [];
@@ -468,10 +472,15 @@ export default function App() {
       const res = await apiCall(`/inspections/search?${params.toString()}`, { headers });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setInspections(data);
+        if (Array.isArray(data)) {
+          const clean = data.filter((i: any) => {
+            const title = (i.product?.name || i.title || '').toLowerCase();
+            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m)) && ![8042, 8041, 8040, 8039, 8038, 1, 2, 3, 4, 5].includes(Number(i.id));
+          });
+          setInspections(clean);
         }
       }
+
     } catch (err) {
       console.warn("Search query failed, using current list", err);
     }
@@ -1109,9 +1118,9 @@ export default function App() {
             onBatchUploadClick={() => batchFileInputRef.current?.click()}
             language={language}
             setLanguage={setLanguage}
-            user={user}
           />
         )}
+
 
 
         {currentPage === 'history' && (

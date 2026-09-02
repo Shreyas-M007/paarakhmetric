@@ -41,20 +41,20 @@ export default function ProfileScreen({
   const t = translations[language] || translations.en;
 
   // Profile edit form state
-  const [name, setName] = useState(user?.name || user?.username || 'Officer Shrey');
-  const [email, setEmail] = useState(user?.email || 'shrey.legalmetrology@delhi.gov.in');
-  const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
-  const [region, setRegion] = useState(user?.region || 'New Delhi NCR');
+  const [name, setName] = useState(user?.name || user?.username || 'Officer');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [region, setRegion] = useState(user?.jurisdiction || user?.region || 'Central Enforcement Zone');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     if (user) {
-
       if (user.name) setName(user.name);
       else if (user.username) setName(user.username);
       if (user.email) setEmail(user.email);
       if (user.phone) setPhone(user.phone);
-      if (user.region) setRegion(user.region);
+      if (user.jurisdiction) setRegion(user.jurisdiction);
+      else if (user.region) setRegion(user.region);
     }
   }, [user]);
 
@@ -63,9 +63,11 @@ export default function ProfileScreen({
     const updated = { 
       ...user, 
       name: name.trim(), 
+      full_name: name.trim(),
       email: email.trim(), 
       phone: phone.trim(), 
-      region: region.trim() 
+      region: region.trim(),
+      jurisdiction: region.trim() 
     };
     if (onUpdateUser) {
       onUpdateUser(updated);
@@ -76,6 +78,7 @@ export default function ProfileScreen({
       setActiveModal(null);
     }, 600);
   };
+
 
   if (view === 'theme') {
     return (
@@ -222,11 +225,16 @@ export default function ProfileScreen({
         <div className="lg:col-span-4 flex flex-col gap-5">
           <section className="bg-surface rounded-2xl p-6 flex flex-col items-center gap-4 text-center border border-divider/60 shadow-sm">
             <div className="w-[88px] h-[88px] rounded-full bg-surface-recessed border-2 border-accent/40 flex items-center justify-center text-fg font-display text-[32px] font-bold shadow-inner">
-              {name?.substring(0,2)?.toUpperCase() || 'OF'}
+              {(user?.name || name)?.substring(0,2)?.toUpperCase() || 'LM'}
             </div>
             <div>
-              <p className="font-display text-[26px] font-bold leading-tight m-0 text-fg">{name}</p>
-              <p className="text-[13px] text-fg-muted font-medium mt-1">{t.fieldOfficer}</p>
+              <p className="font-display text-[26px] font-bold leading-tight m-0 text-fg">{user?.name || name}</p>
+              <p className="text-[13px] text-accent font-bold mt-1">
+                {user?.designation || (user?.role === 'controller' ? 'District Collector & Controller' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Legal Metrology Officer')}
+              </p>
+              <p className="text-[11px] text-fg-muted font-mono mt-0.5">
+                Badge ID: {user?.badge_number || 'LM-001'}
+              </p>
             </div>
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-success/10 border border-success/30 text-success">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>{t.sessionActive}
@@ -236,10 +244,11 @@ export default function ProfileScreen({
           <StatGrid 
             columns={2}
             items={[
-              { id: 'region', label: t.assignedRegion, value: region },
+              { id: 'region', label: t.assignedRegion, value: user?.jurisdiction || region },
               { id: 'version', label: t.appVersionLabel, value: 'v2.4 Live' }
             ]} 
           />
+
 
           <button 
             onClick={onLogout} 
@@ -439,29 +448,72 @@ export default function ProfileScreen({
       {/* Permissions Modal */}
       {activeModal === 'permissions' && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-5 shadow-2xl animate-in zoom-in-95">
+          <div className="w-full max-w-lg bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-5 shadow-2xl animate-in zoom-in-95">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-xl font-bold text-fg">Role & Permissions</h3>
-              <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-fg-muted hover:text-fg">
+              <div>
+                <h3 className="font-display text-xl font-bold text-fg">Role & Statutory Authority</h3>
+                <p className="text-xs text-accent font-semibold">{user?.designation || (user?.role === 'controller' ? 'Collector' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Field Officer')}</p>
+              </div>
+              <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-fg-muted hover:text-fg cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex flex-col gap-3 text-xs text-fg-muted leading-relaxed">
-              <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
-                <span className="text-fg font-bold text-sm">Level 2 Field Inspection Officer</span>
-                <span>Authorized to conduct statutory packaging audits, issue non-compliance violation notices, and record digital officer sign-offs under Legal Metrology Act 2009.</span>
-              </div>
-              <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
-                <span className="text-fg font-bold text-sm">Batch Ingestion Clearance</span>
-                <span>Authorized for bulk label automated vision inspection and multi-commodity verification.</span>
-              </div>
+
+            <div className="flex flex-col gap-3 text-xs text-fg-muted leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
+              {user?.role === 'controller' ? (
+                <>
+                  <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm text-accent">Apex Statutory Seizure & Notice Authority</span>
+                    <span>Empowered under Section 39 of the Legal Metrology Act 2009 to issue Form-1 statutory seizure orders, approve compounding of packaging infractions, and sanction confiscation of non-compliant commodities.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Statewide Jurisdiction & Appellate Control</span>
+                    <span>Executive command across all zonal enforcement wings, standards laboratories, and senior inspection divisions. Full registry oversight and audit ledger sign-off.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Officer Account Governance</span>
+                    <span>Administrative authority to reassign field jurisdictions, modify supervisory assignments, and govern credential registries.</span>
+                  </div>
+                </>
+              ) : user?.role === 'supervisor' ? (
+                <>
+                  <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm text-accent">Supervisory Field Verification & Audit</span>
+                    <span>Authorized to review, verify, and endorse inspection ledgers from Legal Metrology Officers, conduct spot supervisory checks, and recommend compliance clearance.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Standards Laboratory Referral Power</span>
+                    <span>Authorized to order official physical sample dispatch to Regional Standards Laboratories under Rule 18 for high-precision density, tare, and volume validation.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Direct Collectorate Escalation</span>
+                    <span>Statutory channel to escalate persistent or major non-compliance violations directly to the District Collector for compounding or prosecution.</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm text-accent">Field Inspection & Declaration Verification</span>
+                    <span>Authorized under Section 15 & Rule 6 to enter premises, verify physical packaged goods against legal declarations (MRP, Net Qty, Dates, Address), and log infractions.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">AI Computer Vision & Multi-Panel Scanning</span>
+                    <span>Authorized to operate automated OCR and deep-learning label validation across Principal Display Panels, inkjet batch stamps, and barcodes.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Flagging & Memo Issuance</span>
+                    <span>Authorized to flag non-compliant goods and issue preliminary inspection memos for supervisory endorsement.</span>
+                  </div>
+                </>
+              )}
             </div>
-            <button onClick={() => setActiveModal(null)} className="w-full py-3 rounded-full bg-accent text-on-accent font-bold text-xs">
+            <button onClick={() => setActiveModal(null)} className="w-full py-3 rounded-full bg-accent text-on-accent font-bold text-xs cursor-pointer">
               Close
             </button>
           </div>
         </div>
       )}
+
 
       {/* Support Modal */}
       {activeModal === 'support' && (

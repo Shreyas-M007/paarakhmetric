@@ -178,9 +178,23 @@ def on_startup():
                 existing.phone = off["phone"]
                 if not existing.hashed_password.startswith("$argon2"):
                     existing.hashed_password = hash_password("password123")
+        
+        # Purge any legacy demo mock records
+        mock_kws = ['Premium Basmati', 'Choco Bites', 'Cold-Pressed', 'Snack-o', 'Herbal Glow', 'Fresh Cow Milk']
+        for kw in mock_kws:
+            legacy_prods = db.query(Product).filter(Product.name.ilike(f"%{kw}%")).all()
+            for p in legacy_prods:
+                insps = db.query(Inspection).filter(Inspection.product_id == p.id).all()
+                for insp in insps:
+                    db.query(Declaration).filter(Declaration.inspection_id == insp.id).delete()
+                    db.query(ComplianceResult).filter(ComplianceResult.inspection_id == insp.id).delete()
+                    db.query(Image).filter(Image.inspection_id == insp.id).delete()
+                    db.delete(insp)
+                db.delete(p)
         db.commit()
     finally:
         db.close()
+
 
 @app.get("/")
 def read_root():
