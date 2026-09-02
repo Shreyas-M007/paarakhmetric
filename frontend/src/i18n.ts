@@ -148,8 +148,9 @@ export const translations: Record<Language, Translations> = {
     signIn: "Sign In to Enforcement Portal",
     defaultCredentials: "Demo officer credentials prefilled",
     offlineFallback: "Offline Inspection Mode Active",
-    versionInfo: "PaarakhMetric v2.4 · LMPC Statutory Rules 2011",
+    versionInfo: "PaarakhMetric v1.0.0 · LMPC Statutory Rules 2011",
     dashboard: "Dashboard",
+
     scanProduct: "New Scan",
     inspectionHistory: "Audit Ledger",
     settings: "Settings",

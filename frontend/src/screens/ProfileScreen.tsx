@@ -245,8 +245,9 @@ export default function ProfileScreen({
             columns={2}
             items={[
               { id: 'region', label: t.assignedRegion, value: user?.jurisdiction || region },
-              { id: 'version', label: t.appVersionLabel, value: 'v2.4 Live' }
+              { id: 'version', label: t.appVersionLabel, value: '1.0.0' }
             ]} 
+
           />
 
 

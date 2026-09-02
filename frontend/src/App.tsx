@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Language } from './i18n';
 import { mapBackendInspection, MappedInspection } from './utils/mapInspection';
+import { saveInspectionToDb, getAllInspectionsFromDb } from './utils/storage';
 
 // Layout & Components
 import Layout from './components/Layout';
@@ -16,15 +17,25 @@ import ProfileScreen from './screens/ProfileScreen';
 import ScanScreen from './screens/ScanScreen';
 import InspectionDetailScreen from './screens/InspectionDetailScreen';
 
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '' : 'https://paarakhmetric-api.onrender.com');
+export const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('paarakhmetric_custom_api_url');
+    if (custom) return custom.replace(/\/$/, '');
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return '';
+  }
+  return (import.meta as any).env?.VITE_API_URL || 'https://paarakhmetric-api.onrender.com';
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // Resilient API caller that handles both root routes and /api prefix
 export async function apiCall(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const baseUrl = getApiBaseUrl();
   const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
   // Try direct path first (e.g. /products, /inspections, /auth/login)
   try {
-    const res = await fetch(`${API_BASE_URL}${clean}`, options);
+    const res = await fetch(`${baseUrl}${clean}`, options);
     if (res.ok || (res.status !== 404 && res.status !== 405)) {
       return res;
     }
@@ -33,12 +44,13 @@ export async function apiCall(endpoint: string, options: RequestInit = {}): Prom
   // Fallback: try with /api prefix (e.g. /api/products)
   try {
     const apiPrefixed = clean.startsWith('/api') ? clean : `/api${clean}`;
-    return await fetch(`${API_BASE_URL}${apiPrefixed}`, options);
+    return await fetch(`${baseUrl}${apiPrefixed}`, options);
   } catch {
     // Final fallback
-    return await fetch(`${API_BASE_URL}${clean}`, options);
+    return await fetch(`${baseUrl}${clean}`, options);
   }
 }
+
 
 type Page = 'dashboard' | 'scan' | 'history' | 'inspection' | 'settings' | 'reports' | 'profile';
 
@@ -243,7 +255,7 @@ export default function App() {
         if (Array.isArray(parsed)) {
           const clean = parsed.filter((i: any) => {
             const title = (i.product?.name || i.title || '').toLowerCase();
-            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m)) && ![8042, 8041, 8040, 8039, 8038, 1, 2, 3, 4, 5].includes(Number(i.id));
+            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m));
           });
           return clean;
         }
@@ -254,6 +266,24 @@ export default function App() {
   });
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
+
+  // Load complete inspections and photos from IndexedDB on mount
+  useEffect(() => {
+    getAllInspectionsFromDb().then(stored => {
+      if (stored && stored.length > 0) {
+        setInspections(prev => {
+          const map = new Map<string, any>();
+          stored.forEach(s => map.set(String(s.id), s));
+          prev.forEach(p => {
+            const existing = map.get(String(p.id));
+            map.set(String(p.id), { ...existing, ...p, image_url: p.image_url || existing?.image_url });
+          });
+          return Array.from(map.values());
+        });
+      }
+    });
+  }, []);
+
 
 
 
@@ -330,7 +360,7 @@ export default function App() {
 
   // --- Stats ---
   const [stats, setStats] = useState({
-    total: 24, compliant: 15, nonCompliant: 6, review: 3
+    total: 0, compliant: 0, nonCompliant: 0, review: 0
   });
 
 
@@ -351,18 +381,17 @@ export default function App() {
 
   // Recalculate stats dynamically from inspections list
   useEffect(() => {
-    if (inspections.length > 0) {
-      const compliant = inspections.filter(i => i.status === 'COMPLIANT').length;
-      const nonCompliant = inspections.filter(i => i.status === 'NON_COMPLIANT').length;
-      const review = inspections.filter(i => i.status === 'REQUIRES_REVIEW' || i.status === 'REVIEW').length;
-      setStats({
-        total: inspections.length,
-        compliant,
-        nonCompliant,
-        review
-      });
-    }
+    const compliant = inspections.filter(i => i.status === 'COMPLIANT').length;
+    const nonCompliant = inspections.filter(i => i.status === 'NON_COMPLIANT').length;
+    const review = inspections.filter(i => i.status === 'REQUIRES_REVIEW' || i.status === 'REVIEW').length;
+    setStats({
+      total: inspections.length,
+      compliant,
+      nonCompliant,
+      review
+    });
   }, [inspections]);
+
 
   // ============================================================
   //  AUTH HANDLERS
@@ -458,22 +487,31 @@ export default function App() {
       .catch(e => console.warn("Live profile sync notice:", e));
   }, [user?.username]);
 
-  // Inspections persistence (guarded against QuotaExceededError)
+  // Inspections persistence: save to permanent IndexedDB (with full photo) + localStorage
   useEffect(() => {
-    try {
-      if (inspections && inspections.length > 0) {
-        // Strip large base64 image data from localStorage to ensure quota safety
-        const safeInspections = inspections.map(i => {
-          if (i.image_url && i.image_url.length > 30000) {
-            const { image_url, images, ...rest } = i;
-            return rest;
-          }
-          return i;
-        });
-        localStorage.setItem('paarakhmetric_inspections', JSON.stringify(safeInspections));
+    if (inspections && inspections.length > 0) {
+      // Save all to IndexedDB (preserves full photos without quota errors)
+      inspections.forEach(insp => {
+        saveInspectionToDb(insp);
+      });
+
+      // Also persist to localStorage
+      try {
+        localStorage.setItem('paarakhmetric_inspections', JSON.stringify(inspections));
+      } catch {
+        try {
+          const safeInspections = inspections.map(i => {
+            if (i.image_url && i.image_url.length > 30000) {
+              const { image_url, images, ...rest } = i;
+              return rest;
+            }
+            return i;
+          });
+          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(safeInspections));
+        } catch (e) {
+          console.warn("Storage quota warning:", e);
+        }
       }
-    } catch (e) {
-      console.warn("Storage quota protection engaged:", e);
     }
   }, [inspections]);
 
@@ -505,11 +543,36 @@ export default function App() {
         if (Array.isArray(data)) {
           const clean = data.filter((i: any) => {
             const title = (i.product?.name || i.title || '').toLowerCase();
-            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m)) && ![8042, 8041, 8040, 8039, 8038, 1, 2, 3, 4, 5].includes(Number(i.id));
+            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m));
           });
-          setInspections(clean);
+
+          if (clean.length > 0) {
+            setInspections(prev => {
+              const map = new Map<string, any>();
+              prev.forEach(item => map.set(String(item.id), item));
+              clean.forEach((item: any) => {
+                const existing = map.get(String(item.id));
+                const productName = item.product?.name || item.title || 'Packaged Commodity';
+                const category = item.product?.category || 'General';
+                const formatted = {
+                  ...existing,
+                  ...item,
+                  id: String(item.id),
+                  title: productName,
+                  meta: item.meta || `${category} · ${item.location || 'Field Scan'}`,
+                  timeInfo: item.timeInfo || 'Recently',
+                  image_url: existing?.image_url || item.image_url || item.images?.[0]?.url,
+                  images: (existing?.images && existing.images.length > 0) ? existing.images : item.images
+                };
+                map.set(String(item.id), formatted);
+                saveInspectionToDb(formatted);
+              });
+              return Array.from(map.values());
+            });
+          }
         }
       }
+
 
     } catch (err) {
       console.warn("Search query failed, using current list", err);
@@ -893,6 +956,9 @@ export default function App() {
           manufacturer: extractedManufacturer, 
           category: chosenCat 
         },
+        title: finalProductName,
+        meta: `${chosenCat} · Field Inspection Scanner`,
+        timeInfo: 'Just now',
         timestamp: new Date().toISOString(),
         status: overallStatus,
         location: "Field Inspection Scanner",
@@ -900,10 +966,11 @@ export default function App() {
         declarations: decls,
         compliance_results: rulesResults,
         notes: `Live multi-panel scan (${imagesToAnalyze.length} photos) for ${finalProductName} executed and verified.`,
-        image_url: imagesToAnalyze[0],
+        image_url: imagesToAnalyze[0] || capturedImage,
         images: scannedImages.length > 0 ? scannedImages : [{ id: '1', url: capturedImage!, panel: activeSide }]
       };
       
+      saveInspectionToDb(newRecord);
       setActiveInspectionDirect(newRecord);
       setInspections(prev => [newRecord, ...prev]);
       setSelectedInspectionId(newId);
@@ -932,6 +999,9 @@ export default function App() {
           manufacturer: "Consumer Goods Packer", 
           category: chosenCat 
         },
+        title: chosenName,
+        meta: `${chosenCat} · Field Inspection Scanner`,
+        timeInfo: 'Just now',
         timestamp: new Date().toISOString(),
         status: "COMPLIANT",
         location: "Field Inspection Scanner",
@@ -951,9 +1021,11 @@ export default function App() {
           { rule_id: "PC-CARE-005", field: "consumer_care", status: "PASS", details: "Mandatory consumer helpline present" }
         ],
         notes: "Scan processed and logged to audit ledger.",
-        image_url: capturedImage
+        image_url: capturedImage,
+        images: [{ id: '1', url: capturedImage!, panel: 'front' }]
       };
 
+      saveInspectionToDb(fallbackRecord);
       setActiveInspectionDirect(fallbackRecord);
       setInspections(prev => [fallbackRecord, ...prev]);
       setSelectedInspectionId(offlineId);
@@ -967,6 +1039,7 @@ export default function App() {
       })
       .then(() => fetchInspections())
       .catch(e => console.warn("Backend cloud sync error:", e));
+
 
     } finally {
       setIsProcessing(false);
