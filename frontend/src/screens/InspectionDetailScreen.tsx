@@ -8,8 +8,9 @@ import { generateInspectionPdf } from '../utils/generatePdf';
 interface InspectionDetailScreenProps {
   inspection: any;
   inspections?: any[];
-  onSelectInspection?: (id: number) => void;
+  onSelectInspection?: (id: string | number) => void;
   capturedImage?: string | null;
+
   onBack: () => void;
   onManualOverride: (fieldName: string, newValue: string) => void;
   onUpdateProduct?: (id: number, name: string, category: string) => void;
@@ -149,9 +150,10 @@ export default function InspectionDetailScreen({
               {inspections.length > 1 && onSelectInspection && (
                 <select
                   value={inspection.id}
-                  onChange={(e) => onSelectInspection(Number(e.target.value))}
+                  onChange={(e) => onSelectInspection(e.target.value)}
                   className="bg-surface-elevated text-fg text-xs font-bold font-mono px-2 py-1 rounded-lg border border-divider outline-none cursor-pointer hover:border-accent"
                 >
+
                   {inspections.map((item, idx) => (
                     <option key={item.id} value={item.id}>
                       #{item.id} · {item.product?.name || item.title || 'Item'} ({idx + 1}/{inspections.length})

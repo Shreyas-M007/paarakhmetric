@@ -309,8 +309,9 @@ function isLegacyMockRecord(i: any): boolean {
     }
     return [];
   });
-  const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
+  const [selectedInspectionId, setSelectedInspectionId] = useState<string | number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
+
 
   // Load inspections from IndexedDB ONLY if Firebase is not active (pure offline fallback)
   useEffect(() => {
@@ -1329,14 +1330,15 @@ function isLegacyMockRecord(i: any): boolean {
   //  NAVIGATION HELPERS
   // ============================================================
 
-  const viewInspection = (id: string) => {
-    setSelectedInspectionId(Number(id));
+  const viewInspection = (id: string | number) => {
+    const strId = String(id);
+    setSelectedInspectionId(strId);
+    setActiveInspectionDirect(null); // Clear direct scan state so the explicitly clicked item opens
     setCurrentPage('inspection');
   };
 
-  const activeInspection = inspections.find(i => i.id === selectedInspectionId) || inspections[0];
-
   // Map backend inspections to component shape with localized categories and time
+
   const mappedInspections: MappedInspection[] = inspections.map(i => mapBackendInspection(i, language));
 
 
@@ -1414,7 +1416,10 @@ function isLegacyMockRecord(i: any): boolean {
   }
 
   if (currentPage === 'inspection') {
-    const inspectionToRender = activeInspectionDirect || activeInspection || inspections[0];
+    const currentSelected = selectedInspectionId 
+      ? inspections.find(i => String(i.id) === String(selectedInspectionId))
+      : null;
+    const inspectionToRender = currentSelected || activeInspectionDirect || inspections[0];
     return (
       <div className="min-h-screen bg-canvas px-5 pt-6 pb-8">
         {inspectionToRender ? (
@@ -1422,14 +1427,16 @@ function isLegacyMockRecord(i: any): boolean {
             inspection={inspectionToRender}
             inspections={inspections}
             onSelectInspection={(id) => {
-              setSelectedInspectionId(id);
+              setSelectedInspectionId(String(id));
               setActiveInspectionDirect(null);
             }}
             capturedImage={capturedImage}
             onBack={() => {
               setActiveInspectionDirect(null);
+              setSelectedInspectionId(null);
               setCurrentPage('history');
             }}
+
             onManualOverride={handleManualOverride}
             onUpdateProduct={handleUpdateProduct}
             onDeleteInspection={_handleDeleteInspection}
@@ -1492,8 +1499,12 @@ function isLegacyMockRecord(i: any): boolean {
     <>
       <Layout 
         currentPage={currentPage} 
-        onPageChange={(p) => setCurrentPage(p as Page)}
+        onPageChange={(p) => {
+          setActiveInspectionDirect(null);
+          setCurrentPage(p as Page);
+        }}
         language={language}
+
         setLanguage={setLanguage}
         user={user}
       >
