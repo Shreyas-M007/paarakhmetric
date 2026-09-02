@@ -310,15 +310,16 @@ function isLegacyMockRecord(i: any): boolean {
 
   // One-time automatic cleanup of old pre-Firebase legacy records
   useEffect(() => {
-    const hasPurged = localStorage.getItem('paarakhmetric_purged_v2');
+    const hasPurged = localStorage.getItem('paarakhmetric_purged_v3');
     if (!hasPurged) {
       clearAllInspectionsFromDb();
       clearAllInspectionsFromFirebase();
       localStorage.removeItem('paarakhmetric_inspections');
-      localStorage.setItem('paarakhmetric_purged_v2', 'true');
+      localStorage.setItem('paarakhmetric_purged_v3', 'true');
       setInspections([]);
     }
   }, []);
+
 
   // Load complete inspections and photos from IndexedDB on mount
   useEffect(() => {
@@ -628,16 +629,15 @@ function isLegacyMockRecord(i: any): boolean {
     try {
       if (isFirebaseConfigured()) {
         const fbInspections = await getAllInspectionsFromFirebase();
-        if (fbInspections && fbInspections.length > 0) {
-          const clean = fbInspections.filter(i => !isLegacyMockRecord(i));
-          setInspections(clean);
-          try {
-            localStorage.setItem('paarakhmetric_inspections', JSON.stringify(clean));
-          } catch {}
-          clean.forEach(c => saveInspectionToDb(c));
-          return;
-        }
+        const clean = (fbInspections || []).filter(i => !isLegacyMockRecord(i));
+        setInspections(clean);
+        try {
+          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(clean));
+        } catch {}
+        clean.forEach(c => saveInspectionToDb(c));
+        return;
       }
+
 
       const params = new URLSearchParams();
 
