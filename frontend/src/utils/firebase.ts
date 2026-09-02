@@ -11,17 +11,8 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 
-import { 
-  getStorage, 
-  ref, 
-  uploadString, 
-  getDownloadURL, 
-  FirebaseStorage 
-} from 'firebase/storage';
-
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
-let storage: FirebaseStorage | null = null;
 
 const DEFAULT_FIREBASE_STORAGE_KEY = 'paarakhmetric_firebase_config';
 
@@ -68,12 +59,6 @@ export function initFirebase(config?: any): boolean {
     }
 
     db = getFirestore(app);
-    try {
-      storage = getStorage(app);
-    } catch {
-      storage = null;
-    }
-    console.log('⚡ Firebase Firestore Database connected successfully.');
     return true;
   } catch (err) {
     console.warn('Firebase initialization notice:', err);
@@ -85,7 +70,6 @@ export function isFirebaseConfigured(): boolean {
   if (db) return true;
   return initFirebase();
 }
-
 
 /**
  * Real-time continuous listener for inspections across all connected devices.
@@ -122,27 +106,6 @@ export function subscribeToInspections(onUpdate: (inspections: any[]) => void): 
   }
 }
 
-/**
- * Uploads a packaging photo to Firebase Storage and returns permanent Google CDN URL.
- */
-export async function uploadInspectionPhotoToFirebase(
-  inspectionId: string | number,
-  base64OrBlobUrl: string,
-  panelSide: string = 'front'
-): Promise<string | null> {
-  if (!isFirebaseConfigured() || !storage) return null;
-  if (!base64OrBlobUrl || !base64OrBlobUrl.startsWith('data:')) return base64OrBlobUrl;
-
-  try {
-    const storageRef = ref(storage, `inspections/${inspectionId}/${panelSide}_${Date.now()}.jpg`);
-    await uploadString(storageRef, base64OrBlobUrl, 'data_url');
-    const cdnUrl = await getDownloadURL(storageRef);
-    return cdnUrl;
-  } catch (err) {
-    console.warn('Firebase Storage upload error:', err);
-    return null;
-  }
-}
 
 /**
  * Saves or updates an inspection document in Firestore.
