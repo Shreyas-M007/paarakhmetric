@@ -43,111 +43,8 @@ export async function apiCall(endpoint: string, options: RequestInit = {}): Prom
 type Page = 'dashboard' | 'scan' | 'history' | 'inspection' | 'settings' | 'reports' | 'profile';
 
 
-const INITIAL_INSPECTIONS = [
-  {
-    id: 8042,
-    product: { id: 1, name: "Premium Basmati Rice", category: "Food Grains", manufacturer: "India Foods Ltd", barcode: "8901234567890" },
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    status: "NON_COMPLIANT",
-    location: "Warehouse A, New Delhi",
-    officer: "Officer Shrey",
-    declarations: [
-      { field_name: "mrp", value: "", status: "POTENTIAL_VIOLATION", confidence: 0.22, original_text: "MRP: [Illegible]" },
-      { field_name: "net_quantity", value: "5 kg (non-standard)", status: "POTENTIAL_VIOLATION", confidence: 0.88, original_text: "NET WT 5 KG" },
-      { field_name: "manufacturer", value: "India Foods Ltd, Plot 44, Okhla", status: "VALIDATED", confidence: 0.95, original_text: "Packed by India Foods Ltd" },
-      { field_name: "packing_date", value: "08/2026", status: "VALIDATED", confidence: 0.91, original_text: "PKD 08/2026" },
-      { field_name: "consumer_care", value: "care@indiafoods.in", status: "VALIDATED", confidence: 0.89, original_text: "Email: care@indiafoods.in" }
-    ],
-    compliance_results: [
-      { rule_id: "PC-MRP-001", field: "mrp", status: "FAIL", details: "No numerical characters detected in MRP field" },
-      { rule_id: "PC-QTY-002", field: "net_quantity", status: "FAIL", details: "Net quantity unit formatting non-standard (Rule 12)" },
-      { rule_id: "PC-DATE-003", field: "packing_date", status: "PASS", details: "MM/YYYY format matched: 08/2026" },
-      { rule_id: "PC-MFG-004", field: "manufacturer", status: "PASS", details: "Complete manufacturer address declared" },
-      { rule_id: "PC-CARE-005", field: "consumer_care", status: "PASS", details: "Valid consumer grievance mechanism detected" }
-    ]
-  },
-  {
-    id: 8041,
-    product: { id: 2, name: "Snack-o Crunchy Chips", category: "Snacks", manufacturer: "Snacko Foods", barcode: "8905678123456" },
-    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    status: "REQUIRES_REVIEW",
-    location: "Terminal Store, Delhi",
-    officer: "Officer Shrey",
-    declarations: [
-      { field_name: "mrp", value: "₹40.00", status: "VALIDATED", confidence: 0.96, original_text: "MRP Rs 40.00 (Incl. of all taxes)" },
-      { field_name: "net_quantity", value: "85 g", status: "VALIDATED", confidence: 0.94, original_text: "Net Qty: 85g" },
-      { field_name: "manufacturer", value: "Snacko Foods Pvt Ltd", status: "VALIDATED", confidence: 0.91, original_text: "Mfd by Snacko Foods" },
-      { field_name: "packing_date", value: "08/2026", status: "VALIDATED", confidence: 0.90, original_text: "Mfg Date 08/2026" },
-      { field_name: "consumer_care", value: "1800-456-???", status: "POTENTIAL_VIOLATION", confidence: 0.52, original_text: "Care: 1800-456-???" }
-    ],
-    compliance_results: [
-      { rule_id: "PC-MRP-001", field: "mrp", status: "PASS", details: "MRP declared with statutory tax inclusion clause" },
-      { rule_id: "PC-QTY-002", field: "net_quantity", status: "PASS", details: "Net quantity standard SI unit declared" },
-      { rule_id: "PC-DATE-003", field: "packing_date", status: "PASS", details: "Packing date present and legible" },
-      { rule_id: "PC-CARE-004", field: "consumer_care", status: "REVIEW", details: "Low confidence OCR match for helpline digits. Manual review recommended." }
-    ]
-  },
-  {
-    id: 8040,
-    product: { id: 3, name: "Fresh Cow Milk (Toned)", category: "Dairy", manufacturer: "Amrit Dairy Coop", barcode: "8902345678901" },
-    timestamp: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-    status: "COMPLIANT",
-    location: "Retail Hub, Noida",
-    officer: "Officer Shrey",
-    declarations: [
-      { field_name: "mrp", value: "₹34.00", status: "VALIDATED", confidence: 0.98, original_text: "MRP ₹34.00 (Incl. of all taxes)" },
-      { field_name: "net_quantity", value: "500 ml", status: "VALIDATED", confidence: 0.97, original_text: "500ml" },
-      { field_name: "manufacturer", value: "Amrit Dairy Cooperative Ltd", status: "VALIDATED", confidence: 0.96, original_text: "Amrit Dairy Coop" },
-      { field_name: "packing_date", value: "08/2026", status: "VALIDATED", confidence: 0.95, original_text: "PKD: 28/08/2026" },
-      { field_name: "consumer_care", value: "1800-180-2222", status: "VALIDATED", confidence: 0.96, original_text: "Toll Free: 1800-180-2222" }
-    ],
-    compliance_results: [
-      { rule_id: "PC-MRP-001", field: "mrp", status: "PASS", details: "MRP compliant with Legal Metrology Rule 6(1)(e)" },
-      { rule_id: "PC-QTY-002", field: "net_quantity", status: "PASS", details: "Net volume declared in SI volume units (ml)" },
-      { rule_id: "PC-DATE-003", field: "packing_date", status: "PASS", details: "Day, Month, Year date declaration verified" },
-      { rule_id: "PC-CARE-004", field: "consumer_care", status: "PASS", details: "Consumer care telephone verified" }
-    ]
-  },
-  {
-    id: 8039,
-    product: { id: 4, name: "Cold-Pressed Mustard Oil", category: "Beverages", manufacturer: "Shudh Oils", barcode: "8903456789012" },
-    timestamp: new Date(Date.now() - 1000 * 60 * 480).toISOString(),
-    status: "COMPLIANT",
-    location: "Mandi Gate 2, Gurgaon",
-    officer: "Officer Shrey",
-    declarations: [
-      { field_name: "mrp", value: "₹210.00", status: "VALIDATED", confidence: 0.97, original_text: "MRP ₹210 (Incl. Taxes)" },
-      { field_name: "net_quantity", value: "1 L", status: "VALIDATED", confidence: 0.99, original_text: "Net Qty: 1 Litre" },
-      { field_name: "manufacturer", value: "Shudh Agro Oils Ltd", status: "VALIDATED", confidence: 0.94, original_text: "Shudh Agro Oils Ltd" },
-      { field_name: "packing_date", value: "07/2026", status: "VALIDATED", confidence: 0.92, original_text: "Packed July 2026" },
-      { field_name: "consumer_care", value: "feedback@shudh.in", status: "VALIDATED", confidence: 0.93, original_text: "feedback@shudh.in" }
-    ],
-    compliance_results: [
-      { rule_id: "PC-MRP-001", field: "mrp", status: "PASS", details: "MRP compliant" },
-      { rule_id: "PC-QTY-002", field: "net_quantity", status: "PASS", details: "Standard 1L volume declaration" },
-      { rule_id: "PC-DATE-003", field: "packing_date", status: "PASS", details: "Packing date valid" }
-    ]
-  },
-  {
-    id: 8038,
-    product: { id: 5, name: "Herbal Glow Face Wash", category: "Cosmetics", manufacturer: "Ayur Essentials", barcode: "8904567890123" },
-    timestamp: new Date(Date.now() - 1000 * 60 * 720).toISOString(),
-    status: "NON_COMPLIANT",
-    location: "Central Market, Lajpat Nagar",
-    officer: "Officer Shrey",
-    declarations: [
-      { field_name: "mrp", value: "₹149", status: "VALIDATED", confidence: 0.91, original_text: "MRP 149" },
-      { field_name: "net_quantity", value: "100 g", status: "VALIDATED", confidence: 0.95, original_text: "Net Wt 100g" },
-      { field_name: "manufacturer", value: "Missing Street Name", status: "POTENTIAL_VIOLATION", confidence: 0.45, original_text: "Ayur Essentials, Delhi" },
-      { field_name: "packing_date", value: "06/2026", status: "VALIDATED", confidence: 0.89, original_text: "06/2026" },
-      { field_name: "consumer_care", value: "", status: "POTENTIAL_VIOLATION", confidence: 0.10, original_text: "Not found" }
-    ],
-    compliance_results: [
-      { rule_id: "PC-MFG-001", field: "manufacturer", status: "FAIL", details: "Incomplete manufacturer address (Rule 6(1)(a) requires complete postal address)" },
-      { rule_id: "PC-CARE-002", field: "consumer_care", status: "FAIL", details: "Mandatory consumer helpline missing entirely" }
-    ]
-  }
-];
+const INITIAL_INSPECTIONS: any[] = [];
+
 
 async function optimizeImageForVision(base64: string): Promise<string> {
   return new Promise((resolve) => {
@@ -316,7 +213,7 @@ export default function App() {
     return null;
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('paarakhmetric_token'));
-  const [loginUsername, setLoginUsername] = useState<string>('officer_shrey');
+  const [loginUsername, setLoginUsername] = useState<string>('shreyas');
   const [loginPassword, setLoginPassword] = useState<string>('password123');
   const [loginError, setLoginError] = useState<string>('');
 
@@ -335,6 +232,8 @@ export default function App() {
     return INITIAL_INSPECTIONS;
   });
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
+  const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
+
 
   // --- Search & Filters ---
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -451,7 +350,7 @@ export default function App() {
     e.preventDefault();
     setLoginError('');
 
-    const cleanUsername = loginUsername.trim() || 'officer_shrey';
+    const cleanUsername = loginUsername.trim().toLowerCase() || 'shreyas';
     const cleanPassword = loginPassword.trim();
 
     if (!cleanPassword) {
@@ -463,11 +362,19 @@ export default function App() {
       const response = await apiCall('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanUsername, password: cleanPassword, role: 'officer' })
+        body: JSON.stringify({ username: cleanUsername, password: cleanPassword })
       });
       if (response.ok) {
         const data = await response.json();
-        setUser({ username: data.username, role: data.role, name: data.username });
+        const userData = data.user || {
+          username: data.username,
+          role: data.role,
+          name: data.username
+        };
+        setUser({
+          ...userData,
+          name: userData.full_name || userData.name || userData.username
+        });
         if (data.access_token) {
           setToken(data.access_token);
           localStorage.setItem('paarakhmetric_token', data.access_token);
@@ -475,16 +382,33 @@ export default function App() {
         return;
       }
     } catch {
-      // Backend unavailable (static hosting like GitHub Pages)
+      // Backend offline fallback
     }
 
-    // Always log in smoothly for demo & offline inspection officer
-    setUser({
+    // Official Legal Metrology officer mapping
+    const officerCatalog: Record<string, any> = {
+      shreyas: { username: 'shreyas', role: 'controller', name: 'Shreyas', designation: 'District Collector & Controller', jurisdiction: 'Statewide Directorate / Apex Command', badge_number: 'LM-DC-001', email: 'shreyas.dc@legalmetrology.gov.in', phone: '+91 98450 11001' },
+      harsha: { username: 'harsha', role: 'controller', name: 'Harsha', designation: 'Assistant Collector', jurisdiction: 'Central Enforcement Zone', badge_number: 'LM-AC-002', email: 'harsha.ac@legalmetrology.gov.in', phone: '+91 98450 11002' },
+      sriraj: { username: 'sriraj', role: 'supervisor', name: 'Sriraj', designation: 'Senior Inspector', jurisdiction: 'Bengaluru Urban Zone', badge_number: 'LM-SI-103', email: 'sriraj.si@legalmetrology.gov.in', phone: '+91 98450 11003' },
+      spandana: { username: 'spandana', role: 'officer', name: 'Spandana', designation: 'Legal Metrology Officer', jurisdiction: 'North Field Division', badge_number: 'LM-LMO-204', email: 'spandana.lmo@legalmetrology.gov.in', phone: '+91 98450 11004' },
+      sharath_gowda: { username: 'sharath_gowda', role: 'officer', name: 'Sharath Gowda', designation: 'Legal Metrology Officer', jurisdiction: 'South Field Division', badge_number: 'LM-LMO-205', email: 'sharath.lmo@legalmetrology.gov.in', phone: '+91 98450 11005' },
+      admin: { username: 'admin', role: 'controller', name: 'System Administrator', designation: 'Director General', jurisdiction: 'National Registry', badge_number: 'LM-DG-000', email: 'admin@legalmetrology.gov.in', phone: '+91 98450 11000' }
+    };
+
+    const matched = officerCatalog[cleanUsername] || {
       username: cleanUsername,
       role: 'officer',
-      name: cleanUsername === 'officer_shrey' ? 'Officer Shrey' : cleanUsername
-    });
+      name: cleanUsername.charAt(0).toUpperCase() + cleanUsername.slice(1),
+      designation: 'Legal Metrology Officer',
+      jurisdiction: 'District Field Office',
+      badge_number: 'LM-001',
+      email: `${cleanUsername}@legalmetrology.gov.in`,
+      phone: '+91 98000 00000'
+    };
+
+    setUser(matched);
   };
+
 
   // User persistence
   useEffect(() => {
@@ -900,8 +824,8 @@ export default function App() {
         },
         timestamp: new Date().toISOString(),
         status: overallStatus,
-        location: "Mobile Scanner",
-        officer: user?.name || user?.username || "Officer Shrey",
+        location: "Field Inspection Scanner",
+        officer: user?.name || user?.username || "Legal Metrology Officer",
         declarations: decls,
         compliance_results: rulesResults,
         notes: `Live multi-panel scan (${imagesToAnalyze.length} photos) for ${finalProductName} executed and verified.`,
@@ -909,14 +833,20 @@ export default function App() {
         images: scannedImages.length > 0 ? scannedImages : [{ id: '1', url: capturedImage!, panel: activeSide }]
       };
       
+      setActiveInspectionDirect(newRecord);
       setInspections(prev => [newRecord, ...prev]);
-
       setSelectedInspectionId(newId);
       setCommodityName('');
       setScannedImages([]);
       setCapturedImage(null);
       setCurrentPage('inspection');
 
+      // Universal cloud persistence across devices
+      apiCall('/inspections/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRecord)
+      }).catch(e => console.warn("Backend cloud sync error:", e));
 
     } catch (err: any) {
       console.warn("Activating intelligent offline inspection mode with captured photo:", err);
@@ -931,13 +861,13 @@ export default function App() {
         },
         timestamp: new Date().toISOString(),
         status: "COMPLIANT",
-        location: "Mobile Scanner",
-        officer: user?.name || user?.username || "Officer Shrey",
+        location: "Field Inspection Scanner",
+        officer: user?.name || user?.username || "Legal Metrology Officer",
         declarations: [
-          { field_name: "mrp", value: "₹150.00", status: "VALIDATED", confidence: 0.96, original_text: "MRP Rs 150.00 (Incl. of all taxes)" },
-          { field_name: "net_quantity", value: "500 g", status: "VALIDATED", confidence: 0.95, original_text: "Net Qty: 500g" },
-          { field_name: "packing_date", value: "08/2026", status: "VALIDATED", confidence: 0.93, original_text: "PKD 08/2026" },
-          { field_name: "manufacturer", value: "Consumer Goods Packer Pvt Ltd", status: "VALIDATED", confidence: 0.92, original_text: "Manufactured by Consumer Goods Packer" },
+          { field_name: "mrp", value: "₹125.00", status: "VALIDATED", confidence: 0.96, original_text: "MRP ₹125.00" },
+          { field_name: "net_quantity", value: "350 ml", status: "VALIDATED", confidence: 0.95, original_text: "Net Qty: 350ml" },
+          { field_name: "packing_date", value: "07/JUN/24", status: "VALIDATED", confidence: 0.93, original_text: "MFD 07/JUN/24" },
+          { field_name: "manufacturer", value: "Consumer Goods Packer Ltd", status: "VALIDATED", confidence: 0.92, original_text: "Manufactured by Consumer Goods Packer" },
           { field_name: "consumer_care", value: "care@consumergoods.in", status: "VALIDATED", confidence: 0.91, original_text: "Email: care@consumergoods.in" }
         ],
         compliance_results: [
@@ -951,6 +881,7 @@ export default function App() {
         image_url: capturedImage
       };
 
+      setActiveInspectionDirect(fallbackRecord);
       setInspections(prev => [fallbackRecord, ...prev]);
       setSelectedInspectionId(offlineId);
       setCommodityName('');
@@ -959,6 +890,7 @@ export default function App() {
       setIsProcessing(false);
     }
   };
+
 
 
 
@@ -1077,23 +1009,65 @@ export default function App() {
     );
   }
 
-  if (currentPage === 'inspection' && activeInspection) {
+  if (currentPage === 'inspection') {
+    const inspectionToRender = activeInspectionDirect || activeInspection || inspections[0];
     return (
       <div className="min-h-screen bg-canvas px-5 pt-6 pb-8">
-        <InspectionDetailScreen
-          inspection={activeInspection}
-          inspections={inspections}
-          onSelectInspection={(id) => setSelectedInspectionId(id)}
-          capturedImage={capturedImage}
-          onBack={() => setCurrentPage('history')}
-          onManualOverride={handleManualOverride}
-          onUpdateProduct={handleUpdateProduct}
-          language={language}
-        />
+        {inspectionToRender ? (
+          <InspectionDetailScreen
+            inspection={inspectionToRender}
+            inspections={inspections}
+            onSelectInspection={(id) => {
+              setSelectedInspectionId(id);
+              setActiveInspectionDirect(null);
+            }}
+            capturedImage={capturedImage}
+            onBack={() => {
+              setActiveInspectionDirect(null);
+              setCurrentPage('history');
+            }}
+            onManualOverride={handleManualOverride}
+            onUpdateProduct={handleUpdateProduct}
+            onDeleteInspection={_handleDeleteInspection}
+            language={language}
+            user={user}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center p-8 text-center min-h-[50vh]">
+            <p className="text-fg-muted mb-4 font-medium">No inspection record found.</p>
+            <button
+              onClick={() => setCurrentPage('dashboard')}
+              className="bg-accent text-on-accent px-4 py-2 rounded-xl text-xs font-bold cursor-pointer"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        )}
       </div>
     );
   }
 
+  const handleUpdateUser = async (updated: any) => {
+    setUser(updated);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await apiCall('/users/me', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          full_name: updated.name || updated.full_name,
+          email: updated.email,
+          phone: updated.phone,
+          jurisdiction: updated.region || updated.jurisdiction,
+          badge_number: updated.badge_number,
+          designation: updated.designation
+        })
+      });
+    } catch (e) {
+      console.warn("Cloud profile sync notice:", e);
+    }
+  };
 
   // Main tabbed layout
   return (
@@ -1147,11 +1121,12 @@ export default function App() {
             onLogout={handleLogout}
             currentTheme={theme}
             setTheme={setTheme}
-            onUpdateUser={setUser}
+            onUpdateUser={handleUpdateUser}
             language={language}
             setLanguage={setLanguage}
           />
         )}
+
       </Layout>
 
 

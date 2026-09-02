@@ -11,7 +11,9 @@ interface InspectionDetailScreenProps {
   onBack: () => void;
   onManualOverride: (fieldName: string, newValue: string) => void;
   onUpdateProduct?: (id: number, name: string, category: string) => void;
+  onDeleteInspection?: (id: number) => void;
   language?: Language;
+  user?: any;
 }
 
 const CATEGORIES = [
@@ -24,8 +26,9 @@ const CATEGORIES = [
 ];
 
 export default function InspectionDetailScreen({
-  inspection, inspections = [], onSelectInspection, capturedImage, onBack, onManualOverride, onUpdateProduct, language = 'en'
+  inspection, inspections = [], onSelectInspection, capturedImage, onBack, onManualOverride, onUpdateProduct, onDeleteInspection, language = 'en', user
 }: InspectionDetailScreenProps) {
+
   const [inspectingSide, setInspectingSide] = useState('front');
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -399,48 +402,157 @@ export default function InspectionDetailScreen({
 
             {/* Officer Enforcement & Legal Action Panel */}
             <div className="flex flex-col gap-2.5 mt-4 pt-4 border-t border-divider/40">
-              <span className="text-[11px] font-bold text-fg uppercase tracking-wider flex items-center gap-1.5">
-                <span>⚖️ Legal Metrology Officer Enforcement Actions</span>
-              </span>
+              <div className="flex items-center justify-between">
+
+                <span className="text-[11px] font-bold text-fg uppercase tracking-wider flex items-center gap-1.5">
+                  <span>⚖️ Legal Metrology Statutory Enforcement</span>
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent/15 text-accent font-bold uppercase">
+                  {user?.designation || (user?.role === 'controller' ? 'Collector' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Field Officer')}
+                </span>
+              </div>
               <p className="text-[12px] text-fg-muted leading-relaxed">
-                As the inspecting officer under Section 15 & 39 of the Legal Metrology Act, 2009, record statutory enforcement action:
+                {user?.role === 'controller'
+                  ? "As District / Assistant Collector, you hold final statutory powers under Sections 15, 20 & 39 of the Legal Metrology Act, 2009."
+                  : user?.role === 'supervisor'
+                  ? "As Senior Inspector, review field findings, dispatch lab samples, or forward violation files for Collector sanction."
+                  : "As Legal Metrology Officer, conduct field verification and flag potential infractions for administrative order."}
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const allPassed = rulesList.map(r => ({ ...r, status: 'PASS' }));
-                    setRulesList(allPassed);
-                    inspection.compliance_results = allPassed;
-                    inspection.status = 'COMPLIANT';
-                    setCurrentOverallStatus('COMPLIANT');
-                    setSavedSuccessMsg('✓ Issued Legal Metrology Compliance Clearance (All Rules Validated)');
-                    setTimeout(() => setSavedSuccessMsg(''), 3000);
-                  }}
-                  className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-success text-on-accent hover:opacity-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
-                >
-                  <ShieldCheck className="w-4 h-4" /> Approve & Clear (Pass All)
-                </button>
+              {user?.role === 'controller' ? (
+                /* Apex Controller Controls */
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allPassed = rulesList.map(r => ({ ...r, status: 'PASS' }));
+                      setRulesList(allPassed);
+                      inspection.compliance_results = allPassed;
+                      inspection.status = 'COMPLIANT';
+                      setCurrentOverallStatus('COMPLIANT');
+                      setSavedSuccessMsg('✓ Issued Legal Metrology Compliance Clearance (All Rules Validated)');
+                      setTimeout(() => setSavedSuccessMsg(''), 3000);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-success text-on-accent hover:opacity-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" /> Approve Clearance
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const marked = rulesList.map(r => r.status === 'PASS' ? r : ({ ...r, status: 'FAIL' }));
-                    setRulesList(marked);
-                    inspection.compliance_results = marked;
-                    inspection.status = 'NON_COMPLIANT';
-                    setCurrentOverallStatus('NON_COMPLIANT');
-                    setSavedSuccessMsg('⚠️ Issued Form-1 Notice of Violation under Section 39');
-                    setTimeout(() => setSavedSuccessMsg(''), 3000);
-                  }}
-                  className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-error text-white hover:opacity-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
-                >
-                  <AlertCircle className="w-4 h-4" /> Issue Seizure Notice (Form-1)
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const marked = rulesList.map(r => r.status === 'PASS' ? r : ({ ...r, status: 'FAIL' }));
+                      setRulesList(marked);
+                      inspection.compliance_results = marked;
+                      inspection.status = 'NON_COMPLIANT';
+                      setCurrentOverallStatus('NON_COMPLIANT');
+                      setSavedSuccessMsg('⚠️ Issued Form-1 Notice of Violation under Section 39');
+                      setTimeout(() => setSavedSuccessMsg(''), 3000);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-error text-white hover:opacity-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5" /> Form-1 Seizure Notice
+                  </button>
+
+                  {onDeleteInspection && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Confirm deletion of this inspection record from the state registry?")) {
+                          onDeleteInspection(inspection.id);
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-bold bg-surface-elevated hover:bg-error/20 text-error border border-error/30 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                    >
+                      <X className="w-3.5 h-3.5" /> Archive Record
+                    </button>
+                  )}
+                </div>
+              ) : user?.role === 'supervisor' ? (
+                /* Senior Inspector Controls */
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allPassed = rulesList.map(r => ({ ...r, status: 'PASS' }));
+                      setRulesList(allPassed);
+                      inspection.compliance_results = allPassed;
+                      inspection.status = 'COMPLIANT';
+                      setCurrentOverallStatus('COMPLIANT');
+                      setSavedSuccessMsg('✓ Forwarded Inspection for Clearance Endorsement');
+                      setTimeout(() => setSavedSuccessMsg(''), 3000);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-success text-on-accent hover:opacity-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  >
+                    <Check className="w-3.5 h-3.5" /> Recommend Clearance
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const marked = rulesList.map(r => r.status === 'PASS' ? r : ({ ...r, status: 'FAIL' }));
+                      setRulesList(marked);
+                      inspection.compliance_results = marked;
+                      inspection.status = 'NON_COMPLIANT';
+                      setCurrentOverallStatus('NON_COMPLIANT');
+                      setSavedSuccessMsg('⚠️ Forwarded Case to Assistant Collector for Section 39 Notice');
+                      setTimeout(() => setSavedSuccessMsg(''), 3000);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-warning text-black hover:opacity-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" /> Escalate Violation
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSavedSuccessMsg('🧪 Sample Dispatched to Regional Standards Laboratory');
+                      setTimeout(() => setSavedSuccessMsg(''), 3000);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-bold bg-surface-elevated hover:bg-surface text-fg border border-divider flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                  >
+                    🧪 Dispatch to Lab
+                  </button>
+                </div>
+              ) : (
+                /* Field Officer Controls */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allPassed = rulesList.map(r => ({ ...r, status: 'PASS' }));
+                      setRulesList(allPassed);
+                      inspection.compliance_results = allPassed;
+                      inspection.status = 'COMPLIANT';
+                      setCurrentOverallStatus('COMPLIANT');
+                      setSavedSuccessMsg('✓ Physical Declarations Confirmed Compliant');
+                      setTimeout(() => setSavedSuccessMsg(''), 3000);
+                    }}
+                    className="px-3 py-2.5 rounded-xl text-xs font-bold bg-success text-on-accent hover:opacity-95 flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  >
+                    <ShieldCheck className="w-4 h-4" /> Verify Compliant
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const marked = rulesList.map(r => ({ ...r, status: r.status === 'PASS' ? 'REVIEW' : r.status }));
+                      setRulesList(marked);
+                      inspection.compliance_results = marked;
+                      inspection.status = 'REQUIRES_REVIEW';
+                      setCurrentOverallStatus('REQUIRES_REVIEW');
+                      setSavedSuccessMsg('📋 Flagged for Senior Inspector & Collector Review');
+                      setTimeout(() => setSavedSuccessMsg(''), 3000);
+                    }}
+                    className="px-3 py-2.5 rounded-xl text-xs font-bold bg-surface-elevated hover:bg-surface text-fg border border-divider flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95 transition-all"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-warning" /> Flag for Review
+                  </button>
+                </div>
+              )}
             </div>
           </section>
+
 
 
           {/* Declarations table */}

@@ -12,7 +12,7 @@ import shutil
 
 
 from app.database import init_db, get_db, SessionLocal, User, Product, Inspection, ProductImage, Declaration, ComplianceResult, OCRResult, StatutoryRule, sync_inspection_fts
-from app.schemas import UserResponse, UserCreate, ProductResponse, ProductCreate, InspectionResponse, InspectionCreate
+from app.schemas import UserResponse, UserCreate, UserProfileUpdate, ProductResponse, ProductCreate, ProductUpdate, InspectionResponse, InspectionCreate
 from app.auth import hash_password, verify_password, create_access_token, get_current_user, get_current_user_optional
 
 # Pipeline imports
@@ -58,6 +58,13 @@ def format_inspection_summary(insp: Inspection, match_score: float = 100.0) -> d
             "status": r.status,
             "details": r.details or ""
         })
+    images = []
+    for img in (insp.images or []):
+        images.append({
+            "id": str(img.id),
+            "url": f"/uploads/{img.filename}" if not img.filepath.startswith("data:") else img.filepath,
+            "panel": img.panel_side
+        })
     return {
         "id": insp.id,
         "product": {
@@ -68,11 +75,12 @@ def format_inspection_summary(insp: Inspection, match_score: float = 100.0) -> d
         },
         "timestamp": insp.timestamp.isoformat() if insp.timestamp else "",
         "status": insp.status,
-        "location": insp.location or "Warehouse / Field Store",
-        "officer": "Officer Shrey",
+        "location": insp.location or "Field Store",
+        "officer": "Legal Metrology Officer",
         "declarations": decls,
         "compliance_results": rules,
         "notes": insp.notes or "",
+        "images": images,
         "match_score": round(match_score, 1)
     }
 
@@ -81,74 +89,96 @@ def on_startup():
     init_db()
     db = SessionLocal()
     try:
-        # Create or update default officer with Argon2id hash
-        default_user = db.query(User).filter(User.username == "officer_shrey").first()
-        if not default_user:
-            default_officer = User(
-                username="officer_shrey",
-                hashed_password=hash_password("password123"),
-                role="officer"
-            )
-            db.add(default_officer)
-            db.commit()
-        else:
-            # Upgrade legacy plaintext password to Argon2id if needed
-            if not default_user.hashed_password.startswith("$argon2"):
-                default_user.hashed_password = hash_password("password123")
-                db.commit()
+        # Seed and initialize official accounts with operational hierarchy
+        officers_seed = [
+            {
+                "username": "shreyas",
+                "full_name": "Shreyas",
+                "role": "controller",
+                "designation": "District Collector & Controller",
+                "jurisdiction": "Statewide Directorate / Apex Command",
+                "badge_number": "LM-DC-001",
+                "email": "shreyas.dc@legalmetrology.gov.in",
+                "phone": "+91 98450 11001"
+            },
+            {
+                "username": "harsha",
+                "full_name": "Harsha",
+                "role": "controller",
+                "designation": "Assistant Collector",
+                "jurisdiction": "Central Enforcement Zone",
+                "badge_number": "LM-AC-002",
+                "email": "harsha.ac@legalmetrology.gov.in",
+                "phone": "+91 98450 11002"
+            },
+            {
+                "username": "sriraj",
+                "full_name": "Sriraj",
+                "role": "supervisor",
+                "designation": "Senior Inspector",
+                "jurisdiction": "Bengaluru Urban Zone",
+                "badge_number": "LM-SI-103",
+                "email": "sriraj.si@legalmetrology.gov.in",
+                "phone": "+91 98450 11003"
+            },
+            {
+                "username": "spandana",
+                "full_name": "Spandana",
+                "role": "officer",
+                "designation": "Legal Metrology Officer",
+                "jurisdiction": "North Field Division",
+                "badge_number": "LM-LMO-204",
+                "email": "spandana.lmo@legalmetrology.gov.in",
+                "phone": "+91 98450 11004"
+            },
+            {
+                "username": "sharath_gowda",
+                "full_name": "Sharath Gowda",
+                "role": "officer",
+                "designation": "Legal Metrology Officer",
+                "jurisdiction": "South Field Division",
+                "badge_number": "LM-LMO-205",
+                "email": "sharath.lmo@legalmetrology.gov.in",
+                "phone": "+91 98450 11005"
+            },
+            {
+                "username": "admin",
+                "full_name": "System Administrator",
+                "role": "controller",
+                "designation": "Director General",
+                "jurisdiction": "National Registry",
+                "badge_number": "LM-DG-000",
+                "email": "admin@legalmetrology.gov.in",
+                "phone": "+91 98450 11000"
+            }
+        ]
 
-        # Seed sample baseline inspections if database is empty
-        if db.query(Inspection).count() == 0:
-            officer = db.query(User).filter(User.username == "officer_shrey").first()
-            
-            # 1. Premium Basmati Rice (Compliant)
-            p1 = Product(name="Premium Basmati Rice", manufacturer="India Foods Ltd", category="Grain", barcode="8901234567890")
-            db.add(p1)
-            db.commit()
-            db.refresh(p1)
-
-            i1 = Inspection(product_id=p1.id, officer_id=officer.id, status="COMPLIANT", location="Warehouse A, New Delhi", notes="All mandatory declarations present.")
-            db.add(i1)
-            db.commit()
-            db.refresh(i1)
-
-            db.add_all([
-                Declaration(inspection_id=i1.id, field_name="mrp", value="₹240", status="VALIDATED", confidence=0.98, original_text="MRP Rs 240.00"),
-                Declaration(inspection_id=i1.id, field_name="net_quantity", value="5 kg", status="VALIDATED", confidence=0.96, original_text="NET QUANTITY 5 kg"),
-                Declaration(inspection_id=i1.id, field_name="manufacturer", value="India Foods Ltd", status="VALIDATED", confidence=0.95, original_text="Mfd by India Foods Ltd"),
-                Declaration(inspection_id=i1.id, field_name="packing_date", value="07/2026", status="VALIDATED", confidence=0.94, original_text="PKD 07/2026"),
-                Declaration(inspection_id=i1.id, field_name="consumer_care", value="1800-111-222", status="VALIDATED", confidence=0.91, original_text="Care No: 1800-111-222"),
-                ComplianceResult(inspection_id=i1.id, rule_id="PC-MRP-001", status="PASS", details="MRP declaration present and validly formatted (₹240)"),
-                ComplianceResult(inspection_id=i1.id, rule_id="PC-QTY-002", status="PASS", details="Net quantity is declared in standard units (kg)"),
-                ComplianceResult(inspection_id=i1.id, rule_id="PC-DATE-003", status="PASS", details="Packing date present and valid (07/2026)"),
-                ComplianceResult(inspection_id=i1.id, rule_id="PC-CARE-004", status="PASS", details="Customer care details detected")
-            ])
-            db.commit()
-            sync_inspection_fts(db, i1.id)
-
-            # 2. Choco Bites Family Pack (Non-Compliant)
-            p2 = Product(name="Choco Bites Family Pack", manufacturer="Sweet Treats Inc", category="Confectionery", barcode="8902345678901")
-            db.add(p2)
-            db.commit()
-            db.refresh(p2)
-
-            i2 = Inspection(product_id=p2.id, officer_id=officer.id, status="NON_COMPLIANT", location="Reliance Store, Mumbai", notes="Missing consumer care contact information.")
-            db.add(i2)
-            db.commit()
-            db.refresh(i2)
-
-            db.add_all([
-                Declaration(inspection_id=i2.id, field_name="mrp", value="₹150", status="VALIDATED", confidence=0.97, original_text="MRP ₹150"),
-                Declaration(inspection_id=i2.id, field_name="net_quantity", value="400 g", status="VALIDATED", confidence=0.95, original_text="Net Wt. 400g"),
-                Declaration(inspection_id=i2.id, field_name="packing_date", value="05/2026", status="VALIDATED", confidence=0.93, original_text="PACKED 05/26"),
-                Declaration(inspection_id=i2.id, field_name="consumer_care", value="", status="POTENTIAL_VIOLATION", confidence=0.0, original_text="No match found"),
-                ComplianceResult(inspection_id=i2.id, rule_id="PC-MRP-001", status="PASS", details="MRP declaration present and valid"),
-                ComplianceResult(inspection_id=i2.id, rule_id="PC-QTY-002", status="PASS", details="Net quantity declared in standard units (g)"),
-                ComplianceResult(inspection_id=i2.id, rule_id="PC-CARE-004", status="FAIL", details="Consumer care helpline/email missing (Rule 6(1)(n))")
-            ])
-            db.commit()
-            sync_inspection_fts(db, i2.id)
-
+        for off in officers_seed:
+            existing = db.query(User).filter(User.username == off["username"]).first()
+            if not existing:
+                new_off = User(
+                    username=off["username"],
+                    hashed_password=hash_password("password123"),
+                    role=off["role"],
+                    full_name=off["full_name"],
+                    designation=off["designation"],
+                    jurisdiction=off["jurisdiction"],
+                    badge_number=off["badge_number"],
+                    email=off["email"],
+                    phone=off["phone"]
+                )
+                db.add(new_off)
+            else:
+                existing.role = off["role"]
+                existing.full_name = off["full_name"]
+                existing.designation = off["designation"]
+                existing.jurisdiction = off["jurisdiction"]
+                existing.badge_number = off["badge_number"]
+                existing.email = off["email"]
+                existing.phone = off["phone"]
+                if not existing.hashed_password.startswith("$argon2"):
+                    existing.hashed_password = hash_password("password123")
+        db.commit()
     finally:
         db.close()
 
@@ -162,6 +192,7 @@ def health_check():
 
 # --- User & Auth Routes ---
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
@@ -169,7 +200,13 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
         username=user.username,
         hashed_password=hash_password(user.password),
-        role=user.role
+        role=user.role or "officer",
+        full_name=user.full_name or user.username.capitalize(),
+        designation=user.designation or ("Inspector" if user.role == "officer" else user.role.capitalize()),
+        jurisdiction=user.jurisdiction or "General Enforcement Division",
+        badge_number=user.badge_number or f"LM-{Date.now() % 1000 if 'Date' in globals() else 100}",
+        email=user.email or f"{user.username}@legalmetrology.gov.in",
+        phone=user.phone or "+91 98000 00000"
     )
     db.add(new_user)
     db.commit()
@@ -188,7 +225,6 @@ def login(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password"
         )
-    # Generate cryptographic JWT access token
     token = create_access_token(data={
         "sub": db_user.username,
         "role": db_user.role,
@@ -199,8 +235,112 @@ def login(user: UserCreate, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer",
         "username": db_user.username,
-        "role": db_user.role
+        "role": db_user.role,
+        "user": {
+            "id": db_user.id,
+            "username": db_user.username,
+            "role": db_user.role,
+            "full_name": db_user.full_name or db_user.username.capitalize(),
+            "designation": db_user.designation or "Legal Metrology Officer",
+            "jurisdiction": db_user.jurisdiction or "General Zone",
+            "badge_number": db_user.badge_number or "LM-001",
+            "email": db_user.email or f"{db_user.username}@legalmetrology.gov.in",
+            "phone": db_user.phone or ""
+        }
     }
+
+@app.get("/users/me")
+def get_current_user_profile(
+    current_token: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.username == current_token["sub"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role,
+        "full_name": user.full_name or user.username.capitalize(),
+        "designation": user.designation or "Legal Metrology Officer",
+        "jurisdiction": user.jurisdiction or "General Zone",
+        "badge_number": user.badge_number or "LM-001",
+        "email": user.email or f"{user.username}@legalmetrology.gov.in",
+        "phone": user.phone or ""
+    }
+
+@app.put("/users/me")
+def update_current_user_profile(
+    profile_data: UserProfileUpdate,
+    current_token: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.username == current_token["sub"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if profile_data.full_name is not None:
+        user.full_name = profile_data.full_name
+    if profile_data.email is not None:
+        user.email = profile_data.email
+    if profile_data.phone is not None:
+        user.phone = profile_data.phone
+    if profile_data.badge_number is not None:
+        user.badge_number = profile_data.badge_number
+    if profile_data.jurisdiction is not None:
+        user.jurisdiction = profile_data.jurisdiction
+    if profile_data.designation is not None:
+        user.designation = profile_data.designation
+    if profile_data.password:
+        user.hashed_password = hash_password(profile_data.password)
+    
+    db.commit()
+    db.refresh(user)
+    return {
+        "message": "Profile updated successfully",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "role": user.role,
+            "full_name": user.full_name,
+            "designation": user.designation,
+            "jurisdiction": user.jurisdiction,
+            "badge_number": user.badge_number,
+            "email": user.email,
+            "phone": user.phone
+        }
+    }
+
+@app.put("/users/{user_id}")
+def update_user_by_id(
+    user_id: int,
+    profile_data: UserProfileUpdate,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if profile_data.full_name is not None:
+        user.full_name = profile_data.full_name
+    if profile_data.email is not None:
+        user.email = profile_data.email
+    if profile_data.phone is not None:
+        user.phone = profile_data.phone
+    if profile_data.badge_number is not None:
+        user.badge_number = profile_data.badge_number
+    if profile_data.jurisdiction is not None:
+        user.jurisdiction = profile_data.jurisdiction
+    if profile_data.designation is not None:
+        user.designation = profile_data.designation
+    if profile_data.role is not None:
+        user.role = profile_data.role
+    if profile_data.password:
+        user.hashed_password = hash_password(profile_data.password)
+    db.commit()
+    db.refresh(user)
+    return {"message": "User updated", "user": user}
+
+
 
 # --- Product Routes ---
 @app.post("/products", response_model=ProductResponse)
@@ -219,6 +359,155 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
 @app.get("/products", response_model=List[ProductResponse])
 def get_products(db: Session = Depends(get_db)):
     return db.query(Product).all()
+
+@app.put("/products/{product_id}")
+def update_product(product_id: int, prod_update: ProductUpdate, db: Session = Depends(get_db)):
+    prod = db.query(Product).filter(Product.id == product_id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if prod_update.name is not None:
+        prod.name = prod_update.name
+    if prod_update.manufacturer is not None:
+        prod.manufacturer = prod_update.manufacturer
+    if prod_update.category is not None:
+        prod.category = prod_update.category
+    if prod_update.barcode is not None:
+        prod.barcode = prod_update.barcode
+    db.commit()
+    db.refresh(prod)
+    for insp in (prod.inspections or []):
+        sync_inspection_fts(db, insp.id)
+    return prod
+
+@app.post("/inspections/sync")
+def sync_inspection(payload: dict, db: Session = Depends(get_db)):
+    """Save a completed inspection to backend database for cross-device synchronization."""
+    prod_data = payload.get("product", {})
+    prod_name = prod_data.get("name") or "Packaged Commodity"
+    prod_mfg = prod_data.get("manufacturer") or "Detected Manufacturer"
+    prod_cat = prod_data.get("category") or "General FMCG"
+    barcode = prod_data.get("barcode") or ""
+    
+    prod = db.query(Product).filter(Product.name == prod_name).first()
+    if not prod:
+        prod = Product(name=prod_name, manufacturer=prod_mfg, category=prod_cat, barcode=barcode)
+        db.add(prod)
+        db.commit()
+        db.refresh(prod)
+    else:
+        if prod_mfg and prod_mfg != "Detected Manufacturer":
+            prod.manufacturer = prod_mfg
+        if prod_cat:
+            prod.category = prod_cat
+        db.commit()
+    
+    officer_name = payload.get("officer") or "shreyas"
+    officer = db.query(User).filter((User.username == officer_name) | (User.full_name == officer_name)).first()
+    officer_id = officer.id if officer else 1
+    
+    insp = Inspection(
+        product_id=prod.id,
+        officer_id=officer_id,
+        status=payload.get("status", "COMPLIANT"),
+        location=payload.get("location", "Field Scanner"),
+        notes=payload.get("notes", "")
+    )
+    db.add(insp)
+    db.commit()
+    db.refresh(insp)
+    
+    for d in payload.get("declarations", []):
+        decl = Declaration(
+            inspection_id=insp.id,
+            field_name=d.get("field_name", ""),
+            value=d.get("value", ""),
+            status=d.get("status", "VALIDATED"),
+            confidence=d.get("confidence", 0.9),
+            original_text=d.get("original_text", "")
+        )
+        db.add(decl)
+        
+    for r in payload.get("compliance_results", []):
+        res = ComplianceResult(
+            inspection_id=insp.id,
+            rule_id=r.get("rule_id", ""),
+            status=r.get("status", "PASS"),
+            details=r.get("details", "")
+        )
+        db.add(res)
+        
+    for img in payload.get("images", []):
+        img_url = img.get("url", "")
+        if img_url:
+            pimg = ProductImage(
+                inspection_id=insp.id,
+                filename=f"scan_{insp.id}_{img.get('panel', 'side')}.jpg",
+                filepath=img_url,
+                panel_side=img.get("panel", "front")
+            )
+            db.add(pimg)
+            
+    db.commit()
+    sync_inspection_fts(db, insp.id)
+    return format_inspection_summary(insp)
+
+@app.put("/inspections/{inspection_id}")
+def update_inspection(inspection_id: int, payload: dict, db: Session = Depends(get_db)):
+    insp = db.query(Inspection).filter(Inspection.id == inspection_id).first()
+    if not insp:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    if "status" in payload:
+        insp.status = payload["status"]
+    if "notes" in payload:
+        insp.notes = payload["notes"]
+    if "location" in payload:
+        insp.location = payload["location"]
+    if "compliance_results" in payload:
+        for r_in in payload["compliance_results"]:
+            existing = db.query(ComplianceResult).filter(
+                ComplianceResult.inspection_id == insp.id,
+                ComplianceResult.rule_id == r_in.get("rule_id")
+            ).first()
+            if existing:
+                existing.status = r_in.get("status", existing.status)
+                existing.details = r_in.get("details", existing.details)
+            else:
+                db.add(ComplianceResult(
+                    inspection_id=insp.id,
+                    rule_id=r_in.get("rule_id", ""),
+                    status=r_in.get("status", "PASS"),
+                    details=r_in.get("details", "")
+                ))
+    if "declarations" in payload:
+        for d_in in payload["declarations"]:
+            existing_d = db.query(Declaration).filter(
+                Declaration.inspection_id == insp.id,
+                Declaration.field_name == d_in.get("field_name")
+            ).first()
+            if existing_d:
+                existing_d.value = d_in.get("value", existing_d.value)
+                existing_d.status = d_in.get("status", existing_d.status)
+    db.commit()
+    db.refresh(insp)
+    sync_inspection_fts(db, insp.id)
+    return format_inspection_summary(insp)
+
+@app.delete("/inspections/{inspection_id}")
+def delete_inspection(inspection_id: int, db: Session = Depends(get_db)):
+    insp = db.query(Inspection).filter(Inspection.id == inspection_id).first()
+    if not insp:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+    db.query(Declaration).filter(Declaration.inspection_id == inspection_id).delete()
+    db.query(ComplianceResult).filter(ComplianceResult.inspection_id == inspection_id).delete()
+    db.query(ProductImage).filter(ProductImage.inspection_id == inspection_id).delete()
+    try:
+        db.execute(text("DELETE FROM inspections_fts WHERE inspection_id = :id"), {"id": inspection_id})
+    except Exception:
+        pass
+    db.delete(insp)
+    db.commit()
+    return {"message": "Inspection deleted successfully"}
+
 
 # --- Inspection Routes & Search ---
 @app.get("/inspections/search")

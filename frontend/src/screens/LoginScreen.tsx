@@ -111,7 +111,7 @@ export default function LoginScreen({
                 type="text" required value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 className="mt-1 block w-full rounded-xl border border-divider px-3 py-2.5 text-fg placeholder-fg-muted bg-surface-recessed text-sm outline-none focus:border-accent focus:ring-1 focus:ring-accent font-body"
-                placeholder="officer_shrey"
+                placeholder="shreyas, harsha, sriraj, spandana..."
               />
             </div>
             <div>
@@ -131,17 +131,51 @@ export default function LoginScreen({
             </div>
           </div>
 
+          {/* Quick Officer Selector */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-fg-muted uppercase tracking-wider">Select Officer Account:</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { u: 'shreyas', n: 'Shreyas', r: 'District Collector' },
+                { u: 'harsha', n: 'Harsha', r: 'Assistant Collector' },
+                { u: 'sriraj', n: 'Sriraj', r: 'Senior Inspector' },
+                { u: 'spandana', n: 'Spandana', r: 'Metrology Officer' },
+                { u: 'sharath_gowda', n: 'Sharath Gowda', r: 'Metrology Officer' }
+              ].map((acc) => (
+                <button
+                  key={acc.u}
+                  type="button"
+                  onClick={() => {
+                    setLoginUsername(acc.u);
+                    setLoginPassword('password123');
+                  }}
+                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    loginUsername === acc.u
+                      ? 'bg-accent/15 border-accent text-accent'
+                      : 'bg-surface-elevated/60 border-divider text-fg hover:bg-surface-elevated'
+                  }`}
+                >
+                  <p className="text-xs font-bold truncate">{acc.n}</p>
+                  <p className="text-[10px] text-fg-muted truncate">{acc.r}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button type="submit"
-            className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-on-accent hover:brightness-110 active:scale-98 transition-all">
+            className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-on-accent hover:brightness-110 active:scale-98 transition-all cursor-pointer">
             {t.signIn}
           </button>
 
           <div className="text-center text-[10px] text-fg-muted space-y-1 pt-2 border-t border-divider">
-            <p>{t.defaultCredentials}</p>
-            <p className="text-success font-medium">{t.offlineFallback}</p>
+            <p>Default Password: <code className="bg-surface-elevated px-1 py-0.5 rounded text-accent font-mono font-bold">password123</code></p>
+            <p className="text-success font-medium">Enterprise Cloud Synchronized · Role-Based Authority</p>
           </div>
         </form>
       </div>
     </div>
   );
 }
+

@@ -27,7 +27,14 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, default="officer")  # admin, supervisor, officer
+    role = Column(String, default="officer")  # controller, supervisor, officer
+    full_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    badge_number = Column(String, nullable=True)
+    jurisdiction = Column(String, nullable=True)
+    designation = Column(String, nullable=True)
+
 
 class StatutoryRule(Base):
     __tablename__ = "statutory_rules"

@@ -5,10 +5,26 @@ from typing import List, Optional
 # User Schemas
 class UserBase(BaseModel):
     username: str
-    role: str
+    role: str = "officer"
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    badge_number: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    designation: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    badge_number: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    designation: Optional[str] = None
+    role: Optional[str] = None
+    password: Optional[str] = None
 
 class UserResponse(UserBase):
     id: int
@@ -24,6 +40,13 @@ class ProductBase(BaseModel):
 
 class ProductCreate(ProductBase):
     pass
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    manufacturer: Optional[str] = None
+    category: Optional[str] = None
+    barcode: Optional[str] = None
+
 
 class ProductResponse(ProductBase):
     id: int
