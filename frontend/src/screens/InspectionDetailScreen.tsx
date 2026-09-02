@@ -163,26 +163,41 @@ export default function InspectionDetailScreen({
               )}
             </div>
 
-            {/* Editable Commodity Name in header */}
             {!isEditingProduct ? (
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[13px] font-semibold text-fg truncate block">
-                  {inspection.product?.name || 'Packaged Commodity'}
-                </span>
-                <span className="text-[11px] text-fg-muted">· {getCategoryTranslation(inspection.product?.category, language)}</span>
-                <button
-                  onClick={() => {
-                    setProdName(inspection.product?.name || 'Packaged Commodity');
-                    setProdCategory(inspection.product?.category || 'General');
-                    setIsEditingProduct(true);
-                  }}
-                  className="p-1 text-fg-muted hover:text-accent rounded transition-colors cursor-pointer"
-                  title="Rename product / change category"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[13px] font-semibold text-fg truncate block">
+                    {inspection.product?.name || 'Packaged Commodity'}
+                  </span>
+                  <span className="text-[11px] text-fg-muted">· {getCategoryTranslation(inspection.product?.category, language)}</span>
+                  <button
+                    onClick={() => {
+                      setProdName(inspection.product?.name || 'Packaged Commodity');
+                      setProdCategory(inspection.product?.category || 'General');
+                      setIsEditingProduct(true);
+                    }}
+                    className="p-1 text-fg-muted hover:text-accent rounded transition-colors cursor-pointer"
+                    title="Rename product / change category"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-fg-muted mt-1 flex-wrap">
+                  <span className="inline-flex items-center gap-1 font-medium text-fg">
+                    <span className="text-accent font-semibold">👤 Scanned by: {inspection.scanned_by || inspection.officer || 'Legal Metrology Officer'}</span>
+                  </span>
+                  {inspection.officer_badge && (
+                    <span className="font-mono text-[10px] bg-surface-elevated px-1.5 py-0.5 rounded border border-divider">
+                      Badge: {inspection.officer_badge}
+                    </span>
+                  )}
+                  {inspection.officer_jurisdiction && (
+                    <span>· {inspection.officer_jurisdiction}</span>
+                  )}
+                </div>
+              </>
             ) : (
+
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <input
                   type="text"

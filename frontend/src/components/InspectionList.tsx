@@ -10,7 +10,11 @@ export interface Inspection {
   iconType?: string;
   image_url?: string;
   images?: any[];
+  officer?: string;
+  scanned_by?: string;
+  officer_badge?: string;
 }
+
 
 
 interface InspectionListProps {
@@ -78,8 +82,15 @@ export default function InspectionList({
                 </div>
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-[14px] font-semibold text-fg whitespace-nowrap overflow-hidden text-ellipsis group-hover:text-accent transition-colors">{insp.title}</span>
-                  <span className="text-xs text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">{insp.meta}</span>
+                  <div className="flex items-center gap-1.5 text-xs text-fg-muted whitespace-nowrap overflow-hidden text-ellipsis">
+                    <span>{insp.meta}</span>
+                    <span className="text-divider">•</span>
+                    <span className="text-accent/90 font-medium truncate">
+                      👤 {insp.scanned_by || insp.officer || 'Officer'}
+                    </span>
+                  </div>
                 </div>
+
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-mono border ${badgeBorder}`}>{statText}</span>

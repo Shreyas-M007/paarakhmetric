@@ -109,6 +109,11 @@ export function generateInspectionPdf(activeInspection: any, user?: any, _langua
   const commodityTitle = activeInspection.title || activeInspection.product?.name || 'Packaged Commodity';
   const categoryMeta = activeInspection.meta || activeInspection.product?.category || 'General FMCG';
 
+  const scannedByOfficer = activeInspection.scanned_by || activeInspection.officer || user?.name || user?.username || 'Legal Metrology Officer';
+  const officerBadge = activeInspection.officer_badge || user?.badge_number || user?.badge || 'LMO-KA-4921';
+  const officerDesignation = activeInspection.officer_designation || user?.designation || (user?.role === 'controller' ? 'District Collector & Controller' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Legal Metrology Officer');
+  const officerJurisdiction = activeInspection.officer_jurisdiction || user?.jurisdiction || user?.region || 'Central Zone Enforcement Jurisdiction';
+
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
@@ -143,18 +148,23 @@ export function generateInspectionPdf(activeInspection: any, user?: any, _langua
         </div>
       </div>
 
+
       <table class="meta-table">
         <tr>
-          <td style="width: 25%;"><strong>Commodity:</strong></td>
-          <td style="width: 35%;">${commodityTitle}</td>
+          <td style="width: 22%;"><strong>Commodity:</strong></td>
+          <td style="width: 38%;">${commodityTitle}</td>
           <td style="width: 20%;"><strong>Inspection Date:</strong></td>
           <td style="width: 20%;">${formattedInspectionDate}</td>
         </tr>
         <tr>
           <td><strong>Category / Location:</strong></td>
           <td>${categoryMeta}</td>
-          <td><strong>Attesting Officer:</strong></td>
-          <td>${user?.name || user?.username || 'Legal Metrology Officer'}</td>
+          <td><strong>Scanned & Inspected By:</strong></td>
+          <td>
+            <strong style="color: #0f172a; font-size: 12px;">${scannedByOfficer}</strong>
+            <div style="font-size: 10px; color: #475569; margin-top: 1px;">Badge #${officerBadge} · ${officerDesignation}</div>
+            <div style="font-size: 10px; color: #64748b;">${officerJurisdiction}</div>
+          </td>
         </tr>
       </table>
 
@@ -194,10 +204,12 @@ export function generateInspectionPdf(activeInspection: any, user?: any, _langua
           <div>Digital Evidence Hash: SHA256-${activeInspection.id}-AUDIT-${Date.now().toString(36).toUpperCase()}</div>
         </div>
         <div class="signature-box">
-          <div style="font-weight: bold; color: #0f172a;">${user?.name || user?.username || 'Enforcement Officer'}</div>
-          <div>${user?.designation || 'Legal Metrology Officer'}</div>
+          <div style="font-weight: bold; color: #0f172a; font-size: 12px;">${scannedByOfficer}</div>
+          <div style="font-size: 10px; color: #475569;">Badge #${officerBadge}</div>
+          <div style="font-size: 10px; color: #64748b;">${officerDesignation}</div>
         </div>
       </div>
+
     </body>
     </html>
   `);

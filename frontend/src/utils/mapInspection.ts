@@ -16,8 +16,13 @@ export interface MappedInspection {
   notes?: string;
   location?: string;
   officer?: string;
+  scanned_by?: string;
+  officer_badge?: string;
+  officer_designation?: string;
+  officer_jurisdiction?: string;
   timestamp?: string;
 }
+
 
 const categoryIconMap: Record<string, string> = {
   'Beverages': 'Droplet',
@@ -108,10 +113,15 @@ export function mapBackendInspection(raw: any, lang: Language = 'en'): MappedIns
     product: raw.product,
     notes: raw.notes,
     location: raw.location,
-    officer: raw.officer,
+    officer: raw.officer || raw.scanned_by || 'Legal Metrology Officer',
+    scanned_by: raw.scanned_by || raw.officer || 'Legal Metrology Officer',
+    officer_badge: raw.officer_badge || 'LMO-KA-4921',
+    officer_designation: raw.officer_designation || 'Legal Metrology Officer',
+    officer_jurisdiction: raw.officer_jurisdiction || 'Central Zone Enforcement Jurisdiction',
     timestamp: raw.timestamp
   };
 }
+
 
 
 export function computeRuleTally(complianceResults: any[]): { failed: number; total: number } {

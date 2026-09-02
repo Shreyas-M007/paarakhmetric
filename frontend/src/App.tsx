@@ -1156,7 +1156,12 @@ function isLegacyMockRecord(i: any): boolean {
         status: overallStatus,
         location: "Field Inspection Scanner",
         officer: user?.name || user?.username || "Legal Metrology Officer",
+        scanned_by: user?.name || user?.username || "Legal Metrology Officer",
+        officer_badge: user?.badge_number || user?.badge || "LMO-KA-4921",
+        officer_designation: user?.designation || (user?.role === 'controller' ? 'District Collector & Controller' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Legal Metrology Officer'),
+        officer_jurisdiction: user?.jurisdiction || user?.region || "Central Zone Enforcement Jurisdiction",
         declarations: decls,
+
         compliance_results: rulesResults,
         notes: `Live multi-panel scan (${imagesToAnalyze.length} photos) for ${finalProductName} executed and verified.`,
         image_url: imagesToAnalyze[0] || capturedImage,
@@ -1203,7 +1208,12 @@ function isLegacyMockRecord(i: any): boolean {
         status: "COMPLIANT",
         location: "Field Inspection Scanner",
         officer: user?.name || user?.username || "Legal Metrology Officer",
+        scanned_by: user?.name || user?.username || "Legal Metrology Officer",
+        officer_badge: user?.badge_number || user?.badge || "LMO-KA-4921",
+        officer_designation: user?.designation || (user?.role === 'controller' ? 'District Collector & Controller' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Legal Metrology Officer'),
+        officer_jurisdiction: user?.jurisdiction || user?.region || "Central Zone Enforcement Jurisdiction",
         declarations: [
+
           { field_name: "mrp", value: "₹125.00", status: "VALIDATED", confidence: 0.96, original_text: "MRP ₹125.00" },
           { field_name: "net_quantity", value: "350 ml", status: "VALIDATED", confidence: 0.95, original_text: "Net Qty: 350ml" },
           { field_name: "packing_date", value: "07/JUN/24", status: "VALIDATED", confidence: 0.93, original_text: "MFD 07/JUN/24" },
