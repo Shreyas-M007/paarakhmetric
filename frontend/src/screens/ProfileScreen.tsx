@@ -11,11 +11,13 @@ interface ProfileScreenProps {
   currentTheme: string;
   setTheme: (theme: string) => void;
   onUpdateUser?: (updated: any) => void;
+  onClearCache?: () => void;
   language?: Language;
   setLanguage?: (lang: Language) => void;
   geminiApiKey?: string;
   onSaveGeminiKey?: (key: string) => void;
 }
+
 
 
 const INDIC_LANGUAGES_CATALOG = [
@@ -34,8 +36,9 @@ const INDIC_LANGUAGES_CATALOG = [
 ];
 
 export default function ProfileScreen({ 
-  user, onLogout, currentTheme, setTheme, onUpdateUser, language = 'en', setLanguage 
+  user, onLogout, currentTheme, setTheme, onUpdateUser, onClearCache, language = 'en', setLanguage 
 }: ProfileScreenProps) {
+
   const [view, setView] = useState<'profile' | 'theme' | 'language'>('profile');
   const [activeModal, setActiveModal] = useState<'edit' | 'permissions' | 'support' | null>(null);
   const t = translations[language] || translations.en;
@@ -247,9 +250,21 @@ export default function ProfileScreen({
               { id: 'region', label: t.assignedRegion, value: user?.jurisdiction || region },
               { id: 'version', label: t.appVersionLabel, value: '1.0.0' }
             ]} 
-
           />
 
+          {onClearCache && (
+            <button 
+              onClick={() => {
+                if (window.confirm("Clear unsynced local cache and force fresh sync with the cloud database?")) {
+                  onClearCache();
+                }
+              }}
+              className="flex items-center justify-center gap-2 w-full bg-surface-elevated hover:bg-surface border border-divider hover:border-accent text-fg rounded-2xl py-3 px-4 font-bold text-xs transition-colors active:scale-95 cursor-pointer shadow-sm"
+              title="Clear stale local device cache and fetch live cloud records"
+            >
+              <span>🔄 Force Sync With Cloud Database</span>
+            </button>
+          )}
 
           <button 
             onClick={onLogout} 

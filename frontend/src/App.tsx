@@ -529,6 +529,69 @@ export default function App() {
     localStorage.removeItem('paarakhmetric_user');
   };
 
+  const pushInspectionToCloud = async (insp: any) => {
+    try {
+      const sRes = await apiCall('/inspections/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(insp)
+      });
+      if (sRes.ok) return;
+
+      const pRes = await apiCall('/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: insp.title || insp.product?.name || "Scanned Commodity",
+          category: insp.product?.category || "General FMCG",
+          manufacturer: insp.product?.manufacturer || "Detected Manufacturer"
+        })
+      });
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        const iRes = await apiCall('/inspections', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product_id: pData.id,
+            location: insp.location || "Field Inspection Scanner",
+            notes: insp.notes || `Scanned: ${insp.title}`
+          })
+        });
+        if (iRes.ok && insp.image_url && insp.image_url.startsWith('data:')) {
+          const iData = await iRes.json();
+          const imgFetch = await fetch(insp.image_url);
+          const blob = await imgFetch.blob();
+          const form = new FormData();
+          form.append('panel_side', 'front');
+          form.append('file', blob, 'scan.jpg');
+          await apiCall(`/inspections/${iData.id}/upload-image`, {
+            method: 'POST',
+            body: form
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Cloud push error:", err);
+    }
+  };
+
+  const handleClearLocalCache = async () => {
+    localStorage.removeItem('paarakhmetric_inspections');
+    if (typeof window !== 'undefined' && window.indexedDB) {
+      try {
+        const dbs = await (window.indexedDB as any).databases?.() || [];
+        for (const db of dbs) {
+          if (db.name) window.indexedDB.deleteDatabase(db.name);
+        }
+      } catch {
+        window.indexedDB.deleteDatabase('paarakhmetric_db');
+      }
+    }
+    setInspections([]);
+    await fetchInspections();
+  };
+
   // ============================================================
   //  DATA FETCHING
   // ============================================================
@@ -552,42 +615,59 @@ export default function App() {
             return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m));
           });
 
-          if (clean.length > 0) {
-            setInspections(prev => {
-              const map = new Map<string, any>();
-              prev.forEach(item => map.set(String(item.id), item));
-              clean.forEach((item: any) => {
-                const existing = map.get(String(item.id));
-                const productName = item.product?.name || item.title || 'Packaged Commodity';
-                const category = item.product?.category || 'General';
-                const rawUrl = existing?.image_url || item.image_url || item.images?.[0]?.url;
-                const resolvedUrl = rawUrl && !rawUrl.startsWith('data:') && !rawUrl.startsWith('http') && !rawUrl.startsWith('blob:')
-                  ? `${getApiBaseUrl()}${rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl}`
-                  : rawUrl;
-
-                const formatted = {
-                  ...existing,
-                  ...item,
-                  id: String(item.id),
-                  title: productName,
-                  meta: item.meta || `${category} · ${item.location || 'Field Scan'}`,
-                  timeInfo: item.timeInfo || 'Recently',
-                  image_url: resolvedUrl,
-                  images: (existing?.images && existing.images.length > 0) 
-                    ? existing.images 
-                    : (item.images || []).map((im: any) => ({
-                        ...im,
-                        url: im.url && !im.url.startsWith('data:') && !im.url.startsWith('http') && !im.url.startsWith('blob:')
-                          ? `${getApiBaseUrl()}${im.url.startsWith('/') ? im.url : '/' + im.url}`
-                          : im.url
-                      }))
-                };
-                map.set(String(item.id), formatted);
-                saveInspectionToDb(formatted);
-              });
-              return Array.from(map.values());
-            });
+          // Also get local scans from IndexedDB
+          const localStored = await getAllInspectionsFromDb();
+          
+          // If cloud has 0 records but local has scans, auto-upload local scans to cloud so other devices see them!
+          if (clean.length === 0 && localStored && localStored.length > 0) {
+            for (const item of localStored) {
+              if (String(item.id) !== '3') {
+                pushInspectionToCloud(item);
+              }
+            }
           }
+
+          setInspections(prev => {
+            const map = new Map<string, any>();
+            prev.forEach(item => map.set(String(item.id), item));
+            (localStored || []).forEach(l => {
+              if (String(l.id) !== '3') {
+                const existing = map.get(String(l.id));
+                map.set(String(l.id), { ...existing, ...l });
+              }
+            });
+
+            clean.forEach((item: any) => {
+              const existing = map.get(String(item.id));
+              const productName = item.product?.name || item.title || 'Packaged Commodity';
+              const category = item.product?.category || 'General';
+              const rawUrl = existing?.image_url || item.image_url || item.images?.[0]?.url;
+              const resolvedUrl = rawUrl && !rawUrl.startsWith('data:') && !rawUrl.startsWith('http') && !rawUrl.startsWith('blob:')
+                ? `${getApiBaseUrl()}${rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl}`
+                : rawUrl;
+
+              const formatted = {
+                ...existing,
+                ...item,
+                id: String(item.id),
+                title: productName,
+                meta: item.meta || `${category} · ${item.location || 'Field Scan'}`,
+                timeInfo: item.timeInfo || 'Recently',
+                image_url: resolvedUrl,
+                images: (existing?.images && existing.images.length > 0) 
+                  ? existing.images 
+                  : (item.images || []).map((im: any) => ({
+                      ...im,
+                      url: im.url && !im.url.startsWith('data:') && !im.url.startsWith('http') && !im.url.startsWith('blob:')
+                        ? `${getApiBaseUrl()}${im.url.startsWith('/') ? im.url : '/' + im.url}`
+                        : im.url
+                    }))
+              };
+              map.set(String(item.id), formatted);
+              saveInspectionToDb(formatted);
+            });
+            return Array.from(map.values());
+          });
         }
       }
 
@@ -595,6 +675,7 @@ export default function App() {
       console.warn("Search query failed, using current list", err);
     }
   };
+
 
   // Cross-device sync: refresh inspections whenever the user switches views
   useEffect(() => {
@@ -1440,10 +1521,12 @@ export default function App() {
             currentTheme={theme}
             setTheme={setTheme}
             onUpdateUser={handleUpdateUser}
+            onClearCache={handleClearLocalCache}
             language={language}
             setLanguage={setLanguage}
           />
         )}
+
 
       </Layout>
 
