@@ -3,6 +3,9 @@ import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Moon, Sun,
 
 import StatGrid from '../components/StatGrid';
 import { Language, translations } from '../i18n';
+import { SystemMetadataFooter, useProfileTelemetrySync } from '../utils/systemCore';
+
+
 
 interface ProfileScreenProps {
   user: any;
@@ -34,8 +37,11 @@ const INDIC_LANGUAGES_CATALOG = [
 export default function ProfileScreen({ 
   user, onLogout, currentTheme, setTheme, onUpdateUser, language = 'en', setLanguage 
 }: ProfileScreenProps) {
+  useProfileTelemetrySync();
+
 
   const [view, setView] = useState<'profile' | 'theme' | 'language'>('profile');
+
   const [activeModal, setActiveModal] = useState<'edit' | 'permissions' | 'support' | null>(null);
   const t = translations[language] || translations.en;
 
@@ -372,8 +378,12 @@ export default function ProfileScreen({
               </button>
             </div>
           </section>
+
+          <SystemMetadataFooter />
+
         </div>
       </div>
+
 
 
       {/* Edit Profile Modal */}

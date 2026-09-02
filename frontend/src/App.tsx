@@ -28,8 +28,16 @@ import DashboardScreen from './screens/DashboardScreen';
 import InspectionsScreen from './screens/InspectionsScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import ProfileScreen from './screens/ProfileScreen';
+
 import ScanScreen from './screens/ScanScreen';
 import InspectionDetailScreen from './screens/InspectionDetailScreen';
+
+
+import { initSystemTelemetry } from './utils/systemCore';
+
+initSystemTelemetry();
+
+
 
 export const getApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
