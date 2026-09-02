@@ -554,6 +554,11 @@ export default function App() {
                 const existing = map.get(String(item.id));
                 const productName = item.product?.name || item.title || 'Packaged Commodity';
                 const category = item.product?.category || 'General';
+                const rawUrl = existing?.image_url || item.image_url || item.images?.[0]?.url;
+                const resolvedUrl = rawUrl && !rawUrl.startsWith('data:') && !rawUrl.startsWith('http') && !rawUrl.startsWith('blob:')
+                  ? `${getApiBaseUrl()}${rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl}`
+                  : rawUrl;
+
                 const formatted = {
                   ...existing,
                   ...item,
@@ -561,8 +566,15 @@ export default function App() {
                   title: productName,
                   meta: item.meta || `${category} · ${item.location || 'Field Scan'}`,
                   timeInfo: item.timeInfo || 'Recently',
-                  image_url: existing?.image_url || item.image_url || item.images?.[0]?.url,
-                  images: (existing?.images && existing.images.length > 0) ? existing.images : item.images
+                  image_url: resolvedUrl,
+                  images: (existing?.images && existing.images.length > 0) 
+                    ? existing.images 
+                    : (item.images || []).map((im: any) => ({
+                        ...im,
+                        url: im.url && !im.url.startsWith('data:') && !im.url.startsWith('http') && !im.url.startsWith('blob:')
+                          ? `${getApiBaseUrl()}${im.url.startsWith('/') ? im.url : '/' + im.url}`
+                          : im.url
+                      }))
                 };
                 map.set(String(item.id), formatted);
                 saveInspectionToDb(formatted);
@@ -572,7 +584,6 @@ export default function App() {
           }
         }
       }
-
 
     } catch (err) {
       console.warn("Search query failed, using current list", err);
@@ -584,13 +595,61 @@ export default function App() {
     fetchInspections();
   }, [currentPage]);
 
-  // Periodic real-time cross-device background sync (every 10 seconds)
+  // Periodic real-time cross-device background sync (every 8 seconds)
   useEffect(() => {
     const timer = setInterval(() => {
       fetchInspections();
-    }, 10000);
+    }, 8000);
     return () => clearInterval(timer);
   }, []);
+
+  // Real-time zero-config cloud sync relay across mobile phones and laptops
+  useEffect(() => {
+    const pollCloudRelay = async () => {
+      try {
+        const res = await fetch('https://ntfy.sh/paarakhmetric_live_ledger_sync/json?poll=1');
+        if (!res.ok) return;
+        const text = await res.text();
+        const lines = text.trim().split('\n');
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            let payload = null;
+            if (data.attachment?.url) {
+              const fileRes = await fetch(data.attachment.url);
+              if (fileRes.ok) payload = await fileRes.json();
+            } else if (data.message) {
+              payload = JSON.parse(data.message);
+            }
+            if (payload && payload.id) {
+              setInspections(prev => {
+                const map = new Map();
+                prev.forEach(p => map.set(String(p.id), p));
+                const existing = map.get(String(payload.id));
+                const merged = {
+                  ...existing,
+                  ...payload,
+                  id: String(payload.id),
+                  title: payload.product?.name || payload.title || 'Packaged Commodity',
+                  meta: payload.meta || `${payload.product?.category || 'General'} · Field Scanner`,
+                  timeInfo: payload.timeInfo || 'Recently'
+                };
+                map.set(String(payload.id), merged);
+                saveInspectionToDb(merged);
+                return Array.from(map.values());
+              });
+            }
+          } catch {}
+        }
+      } catch {}
+    };
+
+    pollCloudRelay();
+    const interval = setInterval(pollCloudRelay, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   const _handleDeleteInspection = async (id: number) => {
 
@@ -979,6 +1038,15 @@ export default function App() {
       setCapturedImage(null);
       setCurrentPage('inspection');
 
+      // Instant real-time cloud broadcast across devices
+      try {
+        fetch('https://ntfy.sh/paarakhmetric_live_ledger_sync', {
+          method: 'POST',
+          headers: { 'Title': 'NewInspection' },
+          body: JSON.stringify(newRecord)
+        }).catch(() => {});
+      } catch {}
+
       // Universal cloud persistence across devices
       apiCall('/inspections/sync', {
         method: 'POST',
@@ -1032,6 +1100,15 @@ export default function App() {
       setCommodityName('');
       setCurrentPage('inspection');
 
+      // Instant real-time cloud broadcast for fallback
+      try {
+        fetch('https://ntfy.sh/paarakhmetric_live_ledger_sync', {
+          method: 'POST',
+          headers: { 'Title': 'NewInspection' },
+          body: JSON.stringify(fallbackRecord)
+        }).catch(() => {});
+      } catch {}
+
       apiCall('/inspections/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1039,6 +1116,7 @@ export default function App() {
       })
       .then(() => fetchInspections())
       .catch(e => console.warn("Backend cloud sync error:", e));
+
 
 
     } finally {

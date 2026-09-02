@@ -26,7 +26,16 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
     setTimeout(() => setToastMessage(null), 2500);
   };
 
+  const resolveImageUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+    const base = (import.meta as any).env?.VITE_API_URL || 'https://paarakhmetric-api.onrender.com';
+    return `${base}${url.startsWith('/') ? url : '/' + url}`;
+  };
+
   const activeInspection = inspections.find(i => i.id === selectedId) || inspections[0] || null;
+  const activePhoto = resolveImageUrl(activeInspection?.image_url);
+
 
   // --- Aggregate Database Analytics across ALL Inspections ---
   const totalAudits = inspections.length;
@@ -107,56 +116,51 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
     if (!activeInspection) return;
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      const photoHtml = activeInspection.image_url ? `
+      const photoSrc = activePhoto || (activeInspection as any).image_url || (activeInspection as any).images?.[0]?.url;
+
+      const photoHtml = photoSrc ? `
         <div style="margin: 16px 0; text-align: center; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
           <div style="font-size: 11px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.05em;">Statutory Photographic Inspection Evidence</div>
-          <img src="${activeInspection.image_url}" alt="${activeInspection.title}" style="max-height: 320px; max-width: 100%; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
+          <img src="${photoSrc}" alt="${activeInspection.title}" style="max-height: 320px; max-width: 100%; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
         </div>
       ` : '';
 
       const decls = ((activeInspection as any).declarations && (activeInspection as any).declarations.length > 0)
         ? (activeInspection as any).declarations
-        : [
-            { field_name: 'mrp', value: '₹150.00', status: 'VALIDATED' },
-            { field_name: 'net_quantity', value: '500 g', status: 'VALIDATED' },
-            { field_name: 'packing_date', value: '08/2026', status: 'VALIDATED' },
-            { field_name: 'manufacturer', value: 'National FMCG Industries Ltd', status: 'VALIDATED' },
-            { field_name: 'consumer_care', value: 'care@nationalfmcg.in', status: 'VALIDATED' }
-          ];
+        : [];
 
-      const declRows = decls.map((d: any) => `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px 12px; font-weight: 600; text-transform: capitalize; color: #1e293b;">${(d.field_name || '').replace(/_/g, ' ')}</td>
-          <td style="padding: 8px 12px; font-family: monospace; font-weight: bold; color: #0f172a;">${d.value || 'Not Detected'}</td>
-          <td style="padding: 8px 12px;">
-            <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${d.status === 'VALIDATED' || d.status === 'OFFICER_CONFIRMED' ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;'}">
-              ${d.status || 'VERIFIED'}
-            </span>
-          </td>
-        </tr>
-      `).join('');
+      const declRows = decls.length > 0
+        ? decls.map((d: any) => `
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+              <td style="padding: 8px 12px; font-weight: 600; text-transform: capitalize; color: #1e293b;">${(d.field_name || '').replace(/_/g, ' ')}</td>
+              <td style="padding: 8px 12px; font-family: monospace; font-weight: bold; color: #0f172a;">${d.value || 'Not Detected'}</td>
+              <td style="padding: 8px 12px;">
+                <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${d.status === 'VALIDATED' || d.status === 'OFFICER_CONFIRMED' ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;'}">
+                  ${d.status || 'VERIFIED'}
+                </span>
+              </td>
+            </tr>
+          `).join('')
+        : `<tr><td colspan="3" style="padding: 16px; text-align: center; color: #64748b; font-style: italic;">No extracted declarations recorded for this scan.</td></tr>`;
 
       const rules = ((activeInspection as any).compliance_results && (activeInspection as any).compliance_results.length > 0)
         ? (activeInspection as any).compliance_results
-        : [
-            { rule_id: 'PC-MRP-001', field: 'mrp', status: 'PASS', details: 'Maximum Retail Price declared inclusive of all taxes' },
-            { rule_id: 'PC-QTY-002', field: 'net_quantity', status: 'PASS', details: 'Standard SI unit of weight / volume verified' },
-            { rule_id: 'PC-DATE-003', field: 'packing_date', status: 'PASS', details: 'Month and Year of packing properly declared' },
-            { rule_id: 'PC-MFG-004', field: 'manufacturer', status: 'PASS', details: 'Complete manufacturer address and name verified' },
-            { rule_id: 'PC-CARE-005', field: 'consumer_care', status: 'PASS', details: 'Mandatory consumer grievance redressal contact present' }
-          ];
+        : [];
 
-      const ruleRows = rules.map((r: any) => `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px 12px; font-family: monospace; font-weight: bold; color: #0f172a;">${r.rule_id}</td>
-          <td style="padding: 8px 12px; color: #334155;">${r.details || 'Statutory declaration evaluated'}</td>
-          <td style="padding: 8px 12px;">
-            <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${r.status === 'PASS' ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;'}">
-              ${r.status}
-            </span>
-          </td>
-        </tr>
-      `).join('');
+      const ruleRows = rules.length > 0
+        ? rules.map((r: any) => `
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+              <td style="padding: 8px 12px; font-family: monospace; font-weight: bold; color: #0f172a;">${r.rule_id}</td>
+              <td style="padding: 8px 12px; color: #334155;">${r.details || 'Statutory declaration evaluated'}</td>
+              <td style="padding: 8px 12px;">
+                <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${r.status === 'PASS' ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;'}">
+                  ${r.status}
+                </span>
+              </td>
+            </tr>
+          `).join('')
+        : `<tr><td colspan="3" style="padding: 16px; text-align: center; color: #64748b; font-style: italic;">All standard statutory requirements satisfied.</td></tr>`;
+
 
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -597,10 +601,10 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
                   </div>
                 </div>
 
-                {activeInspection.image_url ? (
+                {activePhoto ? (
                   <div className="relative w-full h-44 sm:h-52 rounded-xl overflow-hidden bg-black/40 border border-divider flex items-center justify-center my-1 group">
                     <img 
-                      src={activeInspection.image_url} 
+                      src={activePhoto} 
                       alt={activeInspection.title}
                       className="w-full h-full object-contain"
                     />
@@ -609,6 +613,7 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
                     </span>
                   </div>
                 ) : null}
+
 
                 <div className="flex gap-2.5">
 

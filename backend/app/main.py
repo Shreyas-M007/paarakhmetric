@@ -191,10 +191,11 @@ def on_startup():
                 for insp in insps:
                     db.query(Declaration).filter(Declaration.inspection_id == insp.id).delete()
                     db.query(ComplianceResult).filter(ComplianceResult.inspection_id == insp.id).delete()
-                    db.query(Image).filter(Image.inspection_id == insp.id).delete()
+                    db.query(ProductImage).filter(ProductImage.inspection_id == insp.id).delete()
                     db.delete(insp)
                 db.delete(p)
         db.commit()
+
     finally:
         db.close()
 
@@ -448,7 +449,9 @@ def update_product(product_id: int, prod_update: ProductUpdate, db: Session = De
     return prod
 
 @app.post("/inspections/sync")
+@app.post("/api/inspections/sync")
 def sync_inspection(payload: dict, db: Session = Depends(get_db)):
+
     """Save a completed inspection to backend database for cross-device synchronization."""
     prod_data = payload.get("product", {})
     prod_name = prod_data.get("name") or "Packaged Commodity"
@@ -530,7 +533,9 @@ def sync_inspection(payload: dict, db: Session = Depends(get_db)):
     return format_inspection_summary(insp)
 
 @app.put("/inspections/{inspection_id}")
+@app.put("/api/inspections/{inspection_id}")
 def update_inspection(inspection_id: int, payload: dict, db: Session = Depends(get_db)):
+
     insp = db.query(Inspection).filter(Inspection.id == inspection_id).first()
     if not insp:
         raise HTTPException(status_code=404, detail="Inspection not found")

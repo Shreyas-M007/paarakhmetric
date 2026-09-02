@@ -49,7 +49,15 @@ export default function InspectionDetailScreen({
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  const displayImage = (!imageError && allImages[activeImageIndex]?.url) || (!imageError && (inspection.image_url || capturedImage)) || null;
+  const resolveImageUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+    const base = (import.meta as any).env?.VITE_API_URL || 'https://paarakhmetric-api.onrender.com';
+    return `${base}${url.startsWith('/') ? url : '/' + url}`;
+  };
+
+  const rawImg = (!imageError && allImages[activeImageIndex]?.url) || (!imageError && (inspection.image_url || capturedImage)) || null;
+  const displayImage = resolveImageUrl(rawImg);
 
 
 

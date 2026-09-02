@@ -8,6 +8,15 @@ export interface MappedInspection {
   status: 'COMPLIANT' | 'NON_COMPLIANT' | 'REVIEW';
   timeInfo: string;
   iconType?: string;
+  image_url?: string;
+  images?: any[];
+  declarations?: any[];
+  compliance_results?: any[];
+  product?: any;
+  notes?: string;
+  location?: string;
+  officer?: string;
+  timestamp?: string;
 }
 
 const categoryIconMap: Record<string, string> = {
@@ -78,21 +87,32 @@ function normalizeStatus(status: string): 'COMPLIANT' | 'NON_COMPLIANT' | 'REVIE
 }
 
 export function mapBackendInspection(raw: any, lang: Language = 'en'): MappedInspection {
-  const productName = raw.product?.name || raw.product_name || 'Unnamed Product';
+  const productName = raw.product?.name || raw.product_name || raw.title || 'Unnamed Product';
   const category = raw.product?.category || raw.category || 'General';
   const location = raw.location || '';
   const translatedCat = getCategoryTranslation(category, lang);
   const meta = [translatedCat, location].filter(Boolean).join(' · ');
 
   return {
+    ...raw,
     id: String(raw.id),
     title: productName,
-    meta,
+    meta: raw.meta || meta,
     status: normalizeStatus(raw.status),
-    timeInfo: formatTimeAgo(raw.timestamp, lang),
+    timeInfo: raw.timeInfo || formatTimeAgo(raw.timestamp, lang),
     iconType: categoryIconMap[category] || undefined,
+    image_url: raw.image_url || raw.images?.[0]?.url || undefined,
+    images: raw.images,
+    declarations: raw.declarations,
+    compliance_results: raw.compliance_results,
+    product: raw.product,
+    notes: raw.notes,
+    location: raw.location,
+    officer: raw.officer,
+    timestamp: raw.timestamp
   };
 }
+
 
 export function computeRuleTally(complianceResults: any[]): { failed: number; total: number } {
   if (!complianceResults || complianceResults.length === 0) return { failed: 0, total: 0 };
