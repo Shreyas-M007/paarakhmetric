@@ -247,6 +247,27 @@ export default function App() {
   // --- Navigation ---
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
+// Helper to completely eradicate legacy demo/mock data
+function isLegacyMockRecord(i: any): boolean {
+
+  if (!i) return true;
+  const strId = String(i.id || '');
+  if (['8042', '8041', '8040', '8039', '8038', '1', '2', '3', '4', '5'].includes(strId)) {
+    return true;
+  }
+  const title = (i.product?.name || i.title || '').toLowerCase();
+  const mockKeywords = [
+    'premium basmati',
+    'basmati rice',
+    'choco bites',
+    'cold-pressed',
+    'snack-o',
+    'herbal glow',
+    'fresh cow milk'
+  ];
+  return mockKeywords.some(m => title.includes(m));
+}
+
   // --- Data ---
   const [inspections, setInspections] = useState<any[]>(() => {
     const saved = localStorage.getItem('paarakhmetric_inspections');
@@ -254,14 +275,8 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const clean = parsed.filter((i: any) => {
-            if (String(i.id) === '3') return false;
-            const title = (i.product?.name || i.title || '').toLowerCase();
-            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m));
-          });
-          return clean;
+          return parsed.filter((i: any) => !isLegacyMockRecord(i));
         }
-
       } catch {}
     }
     return [];
@@ -269,25 +284,37 @@ export default function App() {
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
 
-  // Load complete inspections and photos from IndexedDB on mount
+  // Load complete inspections and photos from IndexedDB on mount, purging all legacy mocks
   useEffect(() => {
-    deleteInspectionFromDb('3');
+    // 1. Proactively purge all known mock IDs from IndexedDB
+    ['8042', '8041', '8040', '8039', '8038', '1', '2', '3', '4', '5'].forEach(id => {
+      deleteInspectionFromDb(id);
+    });
+
+    // 2. Read IndexedDB and sanitize
     getAllInspectionsFromDb().then(stored => {
-      const validStored = (stored || []).filter(s => String(s.id) !== '3');
-      if (validStored && validStored.length > 0) {
+      if (!stored) return;
+      stored.forEach(s => {
+        if (isLegacyMockRecord(s)) {
+          deleteInspectionFromDb(s.id);
+        }
+      });
+      const validStored = stored.filter(s => !isLegacyMockRecord(s));
+      if (validStored.length > 0) {
         setInspections(prev => {
           const map = new Map<string, any>();
           validStored.forEach(s => map.set(String(s.id), s));
           prev.forEach(p => {
-            if (String(p.id) === '3') return;
+            if (isLegacyMockRecord(p)) return;
             const existing = map.get(String(p.id));
             map.set(String(p.id), { ...existing, ...p, image_url: p.image_url || existing?.image_url });
           });
-          return Array.from(map.values());
+          return Array.from(map.values()).filter(i => !isLegacyMockRecord(i));
         });
       }
     });
   }, []);
+
 
 
 
@@ -610,31 +637,25 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const clean = data.filter((i: any) => {
-            const title = (i.product?.name || i.title || '').toLowerCase();
-            return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m));
-          });
+          const clean = data.filter((i: any) => !isLegacyMockRecord(i));
 
-          // Also get local scans from IndexedDB
-          const localStored = await getAllInspectionsFromDb();
+          // Also get local scans from IndexedDB (strictly live, non-mock records)
+          const allStored = await getAllInspectionsFromDb();
+          const localStored = (allStored || []).filter((s: any) => !isLegacyMockRecord(s));
           
           // If cloud has 0 records but local has scans, auto-upload local scans to cloud so other devices see them!
-          if (clean.length === 0 && localStored && localStored.length > 0) {
+          if (clean.length === 0 && localStored.length > 0) {
             for (const item of localStored) {
-              if (String(item.id) !== '3') {
-                pushInspectionToCloud(item);
-              }
+              pushInspectionToCloud(item);
             }
           }
 
           setInspections(prev => {
             const map = new Map<string, any>();
-            prev.forEach(item => map.set(String(item.id), item));
-            (localStored || []).forEach(l => {
-              if (String(l.id) !== '3') {
-                const existing = map.get(String(l.id));
-                map.set(String(l.id), { ...existing, ...l });
-              }
+            prev.filter(p => !isLegacyMockRecord(p)).forEach(item => map.set(String(item.id), item));
+            localStored.forEach(l => {
+              const existing = map.get(String(l.id));
+              map.set(String(l.id), { ...existing, ...l });
             });
 
             clean.forEach((item: any) => {
@@ -666,9 +687,10 @@ export default function App() {
               map.set(String(item.id), formatted);
               saveInspectionToDb(formatted);
             });
-            return Array.from(map.values());
+            return Array.from(map.values()).filter(i => !isLegacyMockRecord(i));
           });
         }
+
       }
 
     } catch (err) {
@@ -716,16 +738,28 @@ export default function App() {
         }
       } catch {}
 
-      setInspections(prev => prev.filter(i => String(i.id) !== strId));
-      if (String(selectedInspectionId) === strId) {
-        setSelectedInspectionId(null);
-        setCurrentPage('history');
-      }
+      // Update state and immediately persist clean list to localStorage
+      setInspections(prev => {
+        const remaining = prev.filter(i => String(i.id) !== strId);
+        try {
+          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(remaining));
+        } catch {}
+        return remaining;
+      });
+
+      // Clear all active selection state
+      setActiveInspectionDirect(null);
+      setSelectedInspectionId(null);
+      setCurrentPage('history');
     } catch (err) {
       console.error("Failed to delete inspection:", err);
       setInspections(prev => prev.filter(i => String(i.id) !== strId));
+      setActiveInspectionDirect(null);
+      setSelectedInspectionId(null);
+      setCurrentPage('history');
     }
   };
+
 
 
 

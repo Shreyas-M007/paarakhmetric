@@ -244,8 +244,24 @@ export default function InspectionDetailScreen({
           <span className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-[0.02em] bg-transparent border border-divider ${statusColor} flex-shrink-0`}>
             <span className="w-2 h-2 rounded-full bg-current" />{statusLabel}
           </span>
+
+          {onDeleteInspection && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Confirm deletion of this inspection record from the state registry?")) {
+                  onDeleteInspection(inspection.id);
+                }
+              }}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-surface-elevated hover:bg-error/20 text-error border border-error/30 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm flex-shrink-0"
+              title="Delete this inspection record from the registry"
+            >
+              <X className="w-3.5 h-3.5" /> Archive Record
+            </button>
+          )}
         </div>
       </section>
+
 
       {/* Responsive Desktop Multi-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -549,6 +565,20 @@ export default function InspectionDetailScreen({
                   >
                     🧪 Dispatch to Lab
                   </button>
+
+                  {onDeleteInspection && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Confirm deletion of this inspection record from the state registry?")) {
+                          onDeleteInspection(inspection.id);
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-bold bg-surface-elevated hover:bg-error/20 text-error border border-error/30 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                    >
+                      <X className="w-3.5 h-3.5" /> Archive Record
+                    </button>
+                  )}
                 </div>
               ) : (
                 /* Field Officer Controls */
@@ -596,8 +626,23 @@ export default function InspectionDetailScreen({
                   >
                     <AlertTriangle className="w-4 h-4 text-warning" /> Flag for Review
                   </button>
+
+                  {onDeleteInspection && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Confirm deletion of this inspection record from the state registry?")) {
+                          onDeleteInspection(inspection.id);
+                        }
+                      }}
+                      className="col-span-full px-3 py-2 rounded-xl text-xs font-bold bg-surface-elevated hover:bg-error/20 text-error border border-error/30 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all mt-1"
+                    >
+                      <X className="w-3.5 h-3.5" /> Archive Record
+                    </button>
+                  )}
                 </div>
               )}
+
 
             </div>
           </section>
