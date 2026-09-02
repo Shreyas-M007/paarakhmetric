@@ -3,5 +3,6 @@
   "private": true,
   "scripts": {
     "build": "cd frontend && npm install && npm run build"
-  }
+  },
+  "license": "GPL-3.0-or-later"
 }

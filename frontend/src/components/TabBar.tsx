@@ -19,9 +19,10 @@ export default function TabBar({ currentPage, onPageChange, language = 'en' }: T
 
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around pt-3 px-4 bg-canvas/90 backdrop-blur-xl border-t border-divider"
+    <nav className="fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around pt-3 px-4 bg-canvas/90 backdrop-blur-xl border-t border-divider md:max-w-xl md:left-1/2 md:-translate-x-1/2 md:bottom-5 md:rounded-2xl md:border md:shadow-2xl md:pt-2 md:pb-2 transition-all duration-300"
       style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 20px))' }}
     >
+
       {tabs.map(({ id, label, Icon }) => {
         const active = currentPage === id;
         return (

@@ -234,7 +234,8 @@ export default function InspectionDetailScreen({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+
           {/* Prev / Next Inspection Buttons */}
           {inspections.length > 1 && onSelectInspection && (
             <div className="flex items-center gap-1 bg-surface border border-divider rounded-xl p-1">
