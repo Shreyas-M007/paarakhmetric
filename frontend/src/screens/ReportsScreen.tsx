@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Search, FileText, Download, Share2, CheckCircle2, TrendingUp, BarChart3, ShieldAlert } from 'lucide-react';
 import InspectionList, { Inspection } from '../components/InspectionList';
 import { Language, translations, getStatusTranslation } from '../i18n';
+import { generateInspectionPdf } from '../utils/generatePdf';
+
 
 
 
@@ -114,170 +116,14 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
 
   const handleGeneratePdf = () => {
     if (!activeInspection) return;
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      const photoSrc = activePhoto || (activeInspection as any).image_url || (activeInspection as any).images?.[0]?.url;
-
-      const photoHtml = photoSrc ? `
-        <div style="margin: 16px 0; text-align: center; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <div style="font-size: 11px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.05em;">Statutory Photographic Inspection Evidence</div>
-          <img src="${photoSrc}" alt="${activeInspection.title}" style="max-height: 320px; max-width: 100%; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" />
-        </div>
-      ` : '';
-
-      const decls = ((activeInspection as any).declarations && (activeInspection as any).declarations.length > 0)
-        ? (activeInspection as any).declarations
-        : [];
-
-      const declRows = decls.length > 0
-        ? decls.map((d: any) => `
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 8px 12px; font-weight: 600; text-transform: capitalize; color: #1e293b;">${(d.field_name || '').replace(/_/g, ' ')}</td>
-              <td style="padding: 8px 12px; font-family: monospace; font-weight: bold; color: #0f172a;">${d.value || 'Not Detected'}</td>
-              <td style="padding: 8px 12px;">
-                <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${d.status === 'VALIDATED' || d.status === 'OFFICER_CONFIRMED' ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;'}">
-                  ${d.status || 'VERIFIED'}
-                </span>
-              </td>
-            </tr>
-          `).join('')
-        : `<tr><td colspan="3" style="padding: 16px; text-align: center; color: #64748b; font-style: italic;">No extracted declarations recorded for this scan.</td></tr>`;
-
-      const rules = ((activeInspection as any).compliance_results && (activeInspection as any).compliance_results.length > 0)
-        ? (activeInspection as any).compliance_results
-        : [];
-
-      const ruleRows = rules.length > 0
-        ? rules.map((r: any) => `
-            <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 8px 12px; font-family: monospace; font-weight: bold; color: #0f172a;">${r.rule_id}</td>
-              <td style="padding: 8px 12px; color: #334155;">${r.details || 'Statutory declaration evaluated'}</td>
-              <td style="padding: 8px 12px;">
-                <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${r.status === 'PASS' ? '#dcfce7; color: #166534;' : '#fee2e2; color: #991b1b;'}">
-                  ${r.status}
-                </span>
-              </td>
-            </tr>
-          `).join('')
-        : `<tr><td colspan="3" style="padding: 16px; text-align: center; color: #64748b; font-style: italic;">All standard statutory requirements satisfied.</td></tr>`;
-
-
-      const formatOfficialDate = (ts?: string) => {
-        const d = ts ? new Date(ts) : new Date();
-        if (isNaN(d.getTime())) return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        return d.toLocaleString('en-IN', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        });
-      };
-      const formattedInspectionDate = formatOfficialDate((activeInspection as any).timestamp);
-
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Legal Metrology Inspection Notice #${activeInspection.id}</title>
-          <style>
-            @page { margin: 15mm; size: A4; }
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 20px; color: #0f172a; line-height: 1.5; font-size: 13px; }
-            .header-banner { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
-            h1 { margin: 0 0 4px 0; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
-            .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: bold; background: #fee2e2; color: #b91c1c; }
-            .badge.compliant { background: #dcfce7; color: #15803d; }
-            .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
-            .meta-table td { padding: 8px 12px; font-size: 12px; }
-            .section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #334155; margin: 16px 0 8px 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
-            .data-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
-            .data-table th { background: #f1f5f9; padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: #475569; }
-            .footer { margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #64748b; }
-            .signature-box { text-align: center; border-top: 1px dashed #94a3b8; width: 200px; padding-top: 6px; }
-          </style>
-        </head>
-        <body>
-          <div class="header-banner">
-            <div>
-              <h1>Government Legal Metrology Enforcement Notice</h1>
-              <div style="font-size: 12px; color: #475569;">Legal Metrology (Packaged Commodities) Rules, 2011 · Department of Consumer Affairs</div>
-            </div>
-            <div>
-              <span class="badge ${activeInspection.status === 'COMPLIANT' ? 'compliant' : ''}">
-                NOTICE #${activeInspection.id} · ${activeInspection.status}
-              </span>
-            </div>
-          </div>
-
-          <table class="meta-table">
-            <tr>
-              <td style="width: 25%;"><strong>Commodity:</strong></td>
-              <td style="width: 35%;">${activeInspection.title}</td>
-              <td style="width: 20%;"><strong>Inspection Date:</strong></td>
-              <td style="width: 20%;">${formattedInspectionDate}</td>
-            </tr>
-
-            <tr>
-              <td><strong>Category / Location:</strong></td>
-              <td>${activeInspection.meta}</td>
-              <td><strong>Attesting Officer:</strong></td>
-              <td>${user?.name || user?.username || 'Legal Metrology Officer'}</td>
-            </tr>
-          </table>
-
-          ${photoHtml}
-
-          <div class="section-title">1. Mandatory Statutory Declarations Audited</div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width: 35%;">Declaration Parameter</th>
-                <th style="width: 45%;">Detected On Packaging</th>
-                <th style="width: 20%;">Compliance Verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${declRows}
-            </tbody>
-          </table>
-
-          <div class="section-title">2. Legal Metrology Statutory Rule Evaluation</div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width: 25%;">Rule Reference</th>
-                <th style="width: 55%;">Statutory Requirement & Finding</th>
-                <th style="width: 20%;">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${ruleRows}
-            </tbody>
-          </table>
-
-          <div class="footer">
-            <div>
-              <div>Generated by PaarakhMetric Statutory Compliance Engine</div>
-              <div>Digital Evidence Hash: SHA256-${activeInspection.id}-AUDIT-${Date.now().toString(36).toUpperCase()}</div>
-            </div>
-            <div class="signature-box">
-              <div style="font-weight: bold; color: #0f172a;">${user?.name || user?.username || 'Enforcement Officer'}</div>
-              <div>${user?.designation || 'Legal Metrology Officer'}</div>
-            </div>
-          </div>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => printWindow.print(), 300);
-      showToast('Full statutory PDF report generated!');
+    const ok = generateInspectionPdf(activeInspection, user, language);
+    if (ok) {
+      showToast('Statutory PDF report generated with all photo evidence!');
     } else {
-      window.open(`/api/inspections/${activeInspection.id}/pdf-report`, '_blank');
-      showToast('Opening PDF report...');
+      window.print();
     }
   };
+
 
 
 

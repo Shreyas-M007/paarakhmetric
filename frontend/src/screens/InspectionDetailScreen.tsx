@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check, Upload, ZoomIn, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check, Upload, ZoomIn, Maximize2, Download } from 'lucide-react';
 import { computeRuleTally } from '../utils/mapInspection';
 import { Language, translations, getStatusTranslation, getDeclarationFieldTranslation, getCategoryTranslation } from '../i18n';
+import { generateInspectionPdf } from '../utils/generatePdf';
+
 
 interface InspectionDetailScreenProps {
   inspection: any;
@@ -245,6 +247,15 @@ export default function InspectionDetailScreen({
             <span className="w-2 h-2 rounded-full bg-current" />{statusLabel}
           </span>
 
+          <button
+            type="button"
+            onClick={() => generateInspectionPdf(inspection, user, language)}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-accent text-on-accent flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm flex-shrink-0 hover:opacity-95"
+            title="Download complete statutory inspection PDF with all photographs"
+          >
+            <Download className="w-3.5 h-3.5" /> PDF Notice
+          </button>
+
           {onDeleteInspection && (
             <button
               type="button"
@@ -261,6 +272,7 @@ export default function InspectionDetailScreen({
           )}
         </div>
       </section>
+
 
 
       {/* Responsive Desktop Multi-Column Grid */}
