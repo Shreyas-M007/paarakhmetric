@@ -221,3 +221,20 @@ export async function getAllInspectionsFromFirebase(): Promise<any[]> {
   }
 }
 
+/**
+ * Permanently clears all inspection documents from Firestore across all devices.
+ */
+export async function clearAllInspectionsFromFirebase(): Promise<void> {
+  if (!isFirebaseConfigured() || !db) return;
+  try {
+    const inspectionsCol = collection(db, 'inspections');
+    const snapshot = await getDocs(inspectionsCol);
+    for (const docSnap of snapshot.docs) {
+      await deleteDoc(doc(db, 'inspections', docSnap.id));
+    }
+  } catch (err) {
+    console.warn('Firestore clear error:', err);
+  }
+}
+
+

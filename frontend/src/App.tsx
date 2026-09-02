@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { Language } from './i18n';
 import { mapBackendInspection, MappedInspection } from './utils/mapInspection';
-import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb } from './utils/storage';
+import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb, clearAllInspectionsFromDb } from './utils/storage';
 import { 
   initFirebase, 
   isFirebaseConfigured, 
   subscribeToInspections, 
   saveInspectionToFirebase, 
   deleteInspectionFromFirebase,
-  getAllInspectionsFromFirebase 
+  getAllInspectionsFromFirebase,
+  clearAllInspectionsFromFirebase 
 } from './utils/firebase';
+
 
 
 
@@ -306,9 +308,22 @@ function isLegacyMockRecord(i: any): boolean {
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
 
+  // One-time automatic cleanup of old pre-Firebase legacy records
+  useEffect(() => {
+    const hasPurged = localStorage.getItem('paarakhmetric_purged_v2');
+    if (!hasPurged) {
+      clearAllInspectionsFromDb();
+      clearAllInspectionsFromFirebase();
+      localStorage.removeItem('paarakhmetric_inspections');
+      localStorage.setItem('paarakhmetric_purged_v2', 'true');
+      setInspections([]);
+    }
+  }, []);
+
   // Load complete inspections and photos from IndexedDB on mount
   useEffect(() => {
     getAllInspectionsFromDb().then(stored => {
+
       if (!stored) return;
       const validStored = stored.filter(s => !isLegacyMockRecord(s));
       if (validStored.length > 0) {
@@ -600,18 +615,8 @@ function isLegacyMockRecord(i: any): boolean {
     }
   };
 
-  const handleForceSyncWithCloud = async () => {
-    try {
-      if (isFirebaseConfigured()) {
-        const allStored = await getAllInspectionsFromDb();
-        const validStored = (allStored || []).filter(s => !isLegacyMockRecord(s));
-        for (const item of validStored) {
-          await saveInspectionToFirebase(item);
-        }
-      }
-    } catch {}
-    await fetchInspections();
-  };
+
+
 
 
 
@@ -1573,11 +1578,12 @@ function isLegacyMockRecord(i: any): boolean {
             currentTheme={theme}
             setTheme={setTheme}
             onUpdateUser={handleUpdateUser}
-            onClearCache={handleForceSyncWithCloud}
             language={language}
             setLanguage={setLanguage}
           />
         )}
+
+
 
 
 
