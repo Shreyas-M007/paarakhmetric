@@ -43,7 +43,6 @@ export async function apiCall(endpoint: string, options: RequestInit = {}): Prom
 type Page = 'dashboard' | 'scan' | 'history' | 'inspection' | 'settings' | 'reports' | 'profile';
 
 
-const INITIAL_INSPECTIONS: any[] = [];
 
 
 async function optimizeImageForVision(base64: string): Promise<string> {
@@ -208,7 +207,22 @@ export default function App() {
   const [user, setUser] = useState<any>(() => {
     const saved = localStorage.getItem('paarakhmetric_user');
     if (saved) {
-      try { return JSON.parse(saved); } catch {}
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.username === 'officer_shrey' || !parsed.designation)) {
+          return {
+            username: 'shreyas',
+            role: 'controller',
+            name: 'Shreyas',
+            designation: 'District Collector & Controller',
+            jurisdiction: 'Statewide Directorate / Apex Command',
+            badge_number: 'LM-DC-001',
+            email: 'shreyas.dc@legalmetrology.gov.in',
+            phone: '+91 98450 11001'
+          };
+        }
+        if (parsed && parsed.username) return parsed;
+      } catch {}
     }
     return null;
   });
@@ -226,13 +240,17 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter((i: any) => ![8042, 8041, 8040, 8039, 8038].includes(Number(i.id)));
+          return clean;
+        }
       } catch {}
     }
-    return INITIAL_INSPECTIONS;
+    return [];
   });
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
+
 
 
   // --- Search & Filters ---
@@ -1077,6 +1095,7 @@ export default function App() {
         onPageChange={(p) => setCurrentPage(p as Page)}
         language={language}
         setLanguage={setLanguage}
+        user={user}
       >
         {currentPage === 'dashboard' && (
           <DashboardScreen
@@ -1090,8 +1109,10 @@ export default function App() {
             onBatchUploadClick={() => batchFileInputRef.current?.click()}
             language={language}
             setLanguage={setLanguage}
+            user={user}
           />
         )}
+
 
         {currentPage === 'history' && (
           <InspectionsScreen

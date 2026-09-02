@@ -9,6 +9,7 @@ interface LayoutProps {
   onPageChange: (page: string) => void;
   language: Language;
   setLanguage: (lang: Language) => void;
+  user?: any;
 }
 
 const languages: Array<{ code: Language; symbol: string; label: string; sub: string }> = [
@@ -31,19 +32,25 @@ const langSymbolMap: Record<Language, string> = {
   bn: 'অ'
 };
 
-export default function Layout({ children, currentPage, onPageChange, language, setLanguage }: LayoutProps) {
+export default function Layout({ children, currentPage, onPageChange, language, setLanguage, user }: LayoutProps) {
   const [langOpen, setLangOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
-      {/* Top Bar with Language Switcher */}
+      {/* Top Bar with Officer Badge and Language Switcher */}
       <header className="w-full px-5 pt-4 pb-2 flex items-center justify-between z-30">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-success animate-pulse"></span>
-          <span className="text-[12px] font-semibold tracking-[0.06em] uppercase text-fg-muted font-mono">
-            PaarakhMetric · Live
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-bold text-fg font-body">
+              {user?.name || user?.username || "Officer"}
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent/15 text-accent font-bold uppercase">
+              {user?.designation || (user?.role === 'controller' ? 'Collector' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Officer')}
+            </span>
+          </div>
         </div>
+
 
         {/* Language selector popup */}
         <div className="relative">

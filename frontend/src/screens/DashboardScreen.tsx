@@ -18,6 +18,7 @@ interface DashboardScreenProps {
   onBatchUploadClick?: () => void;
   language?: Language;
   setLanguage?: (lang: Language) => void;
+  user?: any;
 }
 
 export default function DashboardScreen({
@@ -30,6 +31,7 @@ export default function DashboardScreen({
   onStartScan,
   onBatchUploadClick,
   language = 'en',
+  user,
 }: DashboardScreenProps) {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const t = translations[language] || translations.en;
@@ -61,9 +63,17 @@ export default function DashboardScreen({
           <ShieldCheck className="w-9 h-9 text-accent flex-shrink-0" />
           <div className="flex flex-col">
             <h1 className="font-display text-[26px] sm:text-[28px] leading-[32px] font-bold tracking-tight m-0">{t.appName}</h1>
-            <span className="text-[12px] font-semibold text-fg-muted uppercase tracking-wider">{t.appSubtitle}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[12px] font-semibold text-fg-muted uppercase tracking-wider">{t.appSubtitle}</span>
+              {user && (
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-accent/15 text-accent">
+                  {user.name} · {user.designation}
+                </span>
+              )}
+            </div>
           </div>
         </div>
+
 
         <div className="flex items-center gap-2">
           <button 
