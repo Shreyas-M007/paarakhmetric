@@ -2,10 +2,108 @@
  * Universal Statutory PDF Generator for PaarakhMetric
  * Legal Metrology (Packaged Commodities) Rules, 2011 · Department of Consumer Affairs
  * Includes all captured packaging photos, declarations, and rule evaluations.
- */
+ */export function getOfficerRoleDetails(inspection: any, currentUser?: any): {
+  name: string;
+  role: string;
+  designation: string;
+  badge: string;
+  jurisdiction: string;
+  statutoryPower: string;
+} {
+  const rawName = inspection.scanned_by || inspection.officer || currentUser?.name || currentUser?.username || 'Legal Metrology Officer';
+  const rawRole = inspection.officer_role || inspection.role || (currentUser?.name && rawName.toLowerCase().includes(currentUser.name.toLowerCase()) ? currentUser.role : null);
+
+  const directory: Record<string, { role: string; designation: string; badge: string; jurisdiction: string; statutoryPower: string }> = {
+    shreyas: {
+      role: 'District Collector & Controller',
+      designation: 'Controller of Legal Metrology & District Collector',
+      badge: 'LM-DC-001',
+      jurisdiction: 'Statewide Directorate / Apex Command',
+      statutoryPower: 'Apex Statutory Authority (Sections 15, 20, 39 & 48, LM Act 2009)'
+    },
+    harsha: {
+      role: 'Assistant Collector',
+      designation: 'Assistant Collector & Controller of Legal Metrology',
+      badge: 'LM-AC-002',
+      jurisdiction: 'Central Enforcement Zone',
+      statutoryPower: 'Statutory Notice & Confiscation Sanction Authority'
+    },
+    sriraj: {
+      role: 'Senior Inspector',
+      designation: 'Senior Inspector & Technical Supervisor',
+      badge: 'LM-SI-103',
+      jurisdiction: 'Bengaluru Urban Zone',
+      statutoryPower: 'Field Supervisory & Verification Authority'
+    },
+    spandana: {
+      role: 'Legal Metrology Officer',
+      designation: 'Legal Metrology Officer (Field Inspector)',
+      badge: 'LM-LMO-204',
+      jurisdiction: 'North Field Division',
+      statutoryPower: 'Primary Inspection & On-site Verification Officer'
+    },
+    sharath_gowda: {
+      role: 'Legal Metrology Officer',
+      designation: 'Legal Metrology Officer (Field Inspector)',
+      badge: 'LM-LMO-205',
+      jurisdiction: 'South Field Division',
+      statutoryPower: 'Primary Inspection & On-site Verification Officer'
+    },
+    admin: {
+      role: 'Director General',
+      designation: 'Director General of Legal Metrology',
+      badge: 'LM-DG-000',
+      jurisdiction: 'National Registry Headquarters',
+      statutoryPower: 'Apex Regulatory Oversight Authority'
+    }
+  };
+
+  const lowerName = rawName.toLowerCase().trim();
+  for (const [key, profile] of Object.entries(directory)) {
+    if (lowerName === key || lowerName.includes(key)) {
+      return {
+        name: rawName,
+        role: inspection.officer_role || profile.role,
+        designation: inspection.officer_designation || profile.designation,
+        badge: inspection.officer_badge || profile.badge,
+        jurisdiction: inspection.officer_jurisdiction || profile.jurisdiction,
+        statutoryPower: profile.statutoryPower
+      };
+    }
+  }
+
+  let roleTitle = 'Legal Metrology Officer';
+  let designation = inspection.officer_designation || currentUser?.designation;
+  let power = 'Field Inspection & Verification Officer';
+
+  const resolvedRole = (rawRole || currentUser?.role || '').toLowerCase();
+
+  if (resolvedRole === 'controller') {
+    roleTitle = 'District Collector & Controller';
+    designation = designation || 'Controller of Legal Metrology & District Collector';
+    power = 'Apex Statutory Authority (Sections 15, 20, 39 & 48, LM Act 2009)';
+  } else if (resolvedRole === 'supervisor') {
+    roleTitle = 'Senior Inspector';
+    designation = designation || 'Senior Inspector & Technical Supervisor';
+    power = 'Field Supervisory & Verification Authority';
+  } else {
+    roleTitle = 'Legal Metrology Officer';
+    designation = designation || 'Legal Metrology Officer (Field Inspector)';
+    power = 'Primary Inspection & On-site Verification Officer';
+  }
+
+  return {
+    name: rawName,
+    role: roleTitle,
+    designation,
+    badge: inspection.officer_badge || currentUser?.badge_number || currentUser?.badge || 'LM-LMO-204',
+    jurisdiction: inspection.officer_jurisdiction || currentUser?.jurisdiction || currentUser?.region || 'Central Zone Enforcement Jurisdiction',
+    statutoryPower: power
+  };
+}
+
 export function generateInspectionPdf(activeInspection: any, user?: any, _language: string = 'en'): boolean {
   if (!activeInspection) return false;
-
 
   // Collect ALL unique photographic evidence panels
   const allPhotos: Array<{ url: string; panel: string }> = [];
@@ -108,14 +206,12 @@ export function generateInspectionPdf(activeInspection: any, user?: any, _langua
   const formattedInspectionDate = formatOfficialDate((activeInspection as any).timestamp);
   const commodityTitle = activeInspection.title || activeInspection.product?.name || 'Packaged Commodity';
   const categoryMeta = activeInspection.meta || activeInspection.product?.category || 'General FMCG';
+  const officerDetails = getOfficerRoleDetails(activeInspection, user);
 
-  const scannedByOfficer = activeInspection.scanned_by || activeInspection.officer || user?.name || user?.username || 'Legal Metrology Officer';
-  const officerBadge = activeInspection.officer_badge || user?.badge_number || user?.badge || 'LMO-KA-4921';
-  const officerDesignation = activeInspection.officer_designation || user?.designation || (user?.role === 'controller' ? 'District Collector & Controller' : user?.role === 'supervisor' ? 'Senior Inspector' : 'Legal Metrology Officer');
-  const officerJurisdiction = activeInspection.officer_jurisdiction || user?.jurisdiction || user?.region || 'Central Zone Enforcement Jurisdiction';
 
   printWindow.document.write(`
     <!DOCTYPE html>
+
     <html>
     <head>
       <title>Legal Metrology Inspection Notice #${activeInspection.id}</title>
@@ -159,11 +255,17 @@ export function generateInspectionPdf(activeInspection: any, user?: any, _langua
         <tr>
           <td><strong>Category / Location:</strong></td>
           <td>${categoryMeta}</td>
-          <td><strong>Scanned & Inspected By:</strong></td>
+          <td><strong>Auditing & Inspecting Officer:</strong></td>
           <td>
-            <strong style="color: #0f172a; font-size: 12px;">${scannedByOfficer}</strong>
-            <div style="font-size: 10px; color: #475569; margin-top: 1px;">Badge #${officerBadge} · ${officerDesignation}</div>
-            <div style="font-size: 10px; color: #64748b;">${officerJurisdiction}</div>
+            <div style="font-weight: bold; color: #0f172a; font-size: 12px;">
+              ${officerDetails.name}
+              <span style="display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; background: #e0e7ff; color: #3730a3; text-transform: uppercase;">
+                ${officerDetails.role}
+              </span>
+            </div>
+            <div style="font-size: 10.5px; color: #334155; margin-top: 1px;">${officerDetails.designation}</div>
+            <div style="font-size: 10px; color: #64748b;">Badge #${officerDetails.badge} · ${officerDetails.jurisdiction}</div>
+            <div style="font-size: 9.5px; color: #0284c7; font-weight: 600; margin-top: 2px;">${officerDetails.statutoryPower}</div>
           </td>
         </tr>
       </table>
@@ -204,11 +306,13 @@ export function generateInspectionPdf(activeInspection: any, user?: any, _langua
           <div>Digital Evidence Hash: SHA256-${activeInspection.id}-AUDIT-${Date.now().toString(36).toUpperCase()}</div>
         </div>
         <div class="signature-box">
-          <div style="font-weight: bold; color: #0f172a; font-size: 12px;">${scannedByOfficer}</div>
-          <div style="font-size: 10px; color: #475569;">Badge #${officerBadge}</div>
-          <div style="font-size: 10px; color: #64748b;">${officerDesignation}</div>
+          <div style="font-weight: bold; color: #0f172a; font-size: 12px;">${officerDetails.name}</div>
+          <div style="font-size: 9.5px; font-weight: bold; color: #3730a3; text-transform: uppercase;">${officerDetails.role}</div>
+          <div style="font-size: 10px; color: #475569;">${officerDetails.designation}</div>
+          <div style="font-size: 9.5px; color: #64748b;">Badge #${officerDetails.badge} · ${officerDetails.jurisdiction}</div>
         </div>
       </div>
+
 
     </body>
     </html>

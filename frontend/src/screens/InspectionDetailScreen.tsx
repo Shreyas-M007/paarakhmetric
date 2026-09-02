@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check, Upload, ZoomIn, Maximize2, Download } from 'lucide-react';
 import { computeRuleTally } from '../utils/mapInspection';
 import { Language, translations, getStatusTranslation, getDeclarationFieldTranslation, getCategoryTranslation } from '../i18n';
-import { generateInspectionPdf } from '../utils/generatePdf';
+import { generateInspectionPdf, getOfficerRoleDetails } from '../utils/generatePdf';
+
 
 
 interface InspectionDetailScreenProps {
@@ -100,6 +101,8 @@ export default function InspectionDetailScreen({
     currentOverallStatus === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning';
 
   const currentIndex = inspections.findIndex(i => i.id === inspection.id);
+  const officerDetails = getOfficerRoleDetails(inspection, user);
+
 
   const handleRuleVerdictChange = (ruleId: string, newStatus: string) => {
     setRulesList(prev => {
@@ -183,19 +186,26 @@ export default function InspectionDetailScreen({
                   </button>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-fg-muted mt-1 flex-wrap">
-                  <span className="inline-flex items-center gap-1 font-medium text-fg">
-                    <span className="text-accent font-semibold">👤 Scanned by: {inspection.scanned_by || inspection.officer || 'Legal Metrology Officer'}</span>
+                  <span className="inline-flex items-center gap-1.5 font-medium text-fg">
+                    <span className="text-accent font-semibold">👤 Scanned by: {officerDetails.name}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-accent/15 text-accent border border-accent/30">
+                      {officerDetails.role}
+                    </span>
                   </span>
-                  {inspection.officer_badge && (
+                  <span className="text-fg-muted">
+                    ({officerDetails.designation})
+                  </span>
+                  {officerDetails.badge && (
                     <span className="font-mono text-[10px] bg-surface-elevated px-1.5 py-0.5 rounded border border-divider">
-                      Badge: {inspection.officer_badge}
+                      Badge: {officerDetails.badge}
                     </span>
                   )}
-                  {inspection.officer_jurisdiction && (
-                    <span>· {inspection.officer_jurisdiction}</span>
+                  {officerDetails.jurisdiction && (
+                    <span>· {officerDetails.jurisdiction}</span>
                   )}
                 </div>
               </>
+
             ) : (
 
               <div className="flex items-center gap-2 mt-1 flex-wrap">
