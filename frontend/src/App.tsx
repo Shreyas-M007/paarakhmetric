@@ -2,6 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Language } from './i18n';
 import { mapBackendInspection, MappedInspection } from './utils/mapInspection';
 import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb } from './utils/storage';
+import { 
+  initFirebase, 
+  isFirebaseConfigured, 
+  subscribeToInspections, 
+  saveInspectionToFirebase, 
+  deleteInspectionFromFirebase,
+  getAllInspectionsFromFirebase 
+} from './utils/firebase';
+
+
 
 
 // Layout & Components
@@ -317,6 +327,28 @@ function isLegacyMockRecord(i: any): boolean {
   }, []);
 
 
+  // Realtime Firebase Firestore cross-device subscription (< 250ms sync)
+  useEffect(() => {
+    initFirebase();
+    if (isFirebaseConfigured()) {
+      const unsub = subscribeToInspections((fbInspections) => {
+        if (Array.isArray(fbInspections) && fbInspections.length > 0) {
+          const clean = fbInspections.filter(i => !isLegacyMockRecord(i));
+          setInspections(clean);
+          try {
+            localStorage.setItem('paarakhmetric_inspections', JSON.stringify(clean));
+          } catch {}
+          clean.forEach(c => saveInspectionToDb(c));
+        }
+      });
+      return () => {
+        if (unsub) unsub();
+      };
+    }
+  }, []);
+
+
+
 
 
 
@@ -560,61 +592,27 @@ function isLegacyMockRecord(i: any): boolean {
 
   const pushInspectionToCloud = async (insp: any) => {
     try {
-      const sRes = await apiCall('/inspections/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(insp)
-      });
-      if (sRes.ok) return;
-
-      const pRes = await apiCall('/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: insp.title || insp.product?.name || "Scanned Commodity",
-          category: insp.product?.category || "General FMCG",
-          manufacturer: insp.product?.manufacturer || "Detected Manufacturer"
-        })
-      });
-      if (pRes.ok) {
-        const pData = await pRes.json();
-        const iRes = await apiCall('/inspections', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            product_id: pData.id,
-            location: insp.location || "Field Inspection Scanner",
-            notes: insp.notes || `Scanned: ${insp.title}`
-          })
-        });
-        if (iRes.ok && insp.image_url && insp.image_url.startsWith('data:')) {
-          const iData = await iRes.json();
-          const imgFetch = await fetch(insp.image_url);
-          const blob = await imgFetch.blob();
-          const form = new FormData();
-          form.append('panel_side', 'front');
-          form.append('file', blob, 'scan.jpg');
-          await apiCall(`/inspections/${iData.id}/upload-image`, {
-            method: 'POST',
-            body: form
-          });
-        }
+      if (isFirebaseConfigured()) {
+        await saveInspectionToFirebase(insp);
       }
     } catch (err) {
-      console.warn("Cloud push error:", err);
+      console.warn("Firebase cloud push notice:", err);
     }
   };
 
   const handleForceSyncWithCloud = async () => {
     try {
-      const allStored = await getAllInspectionsFromDb();
-      const validStored = (allStored || []).filter(s => !isLegacyMockRecord(s));
-      for (const item of validStored) {
-        await pushInspectionToCloud(item);
+      if (isFirebaseConfigured()) {
+        const allStored = await getAllInspectionsFromDb();
+        const validStored = (allStored || []).filter(s => !isLegacyMockRecord(s));
+        for (const item of validStored) {
+          await saveInspectionToFirebase(item);
+        }
       }
     } catch {}
     await fetchInspections();
   };
+
 
 
   // ============================================================
@@ -623,7 +621,21 @@ function isLegacyMockRecord(i: any): boolean {
 
   const fetchInspections = async (query = searchQuery, status = statusFilter, category = categoryFilter) => {
     try {
+      if (isFirebaseConfigured()) {
+        const fbInspections = await getAllInspectionsFromFirebase();
+        if (fbInspections && fbInspections.length > 0) {
+          const clean = fbInspections.filter(i => !isLegacyMockRecord(i));
+          setInspections(clean);
+          try {
+            localStorage.setItem('paarakhmetric_inspections', JSON.stringify(clean));
+          } catch {}
+          clean.forEach(c => saveInspectionToDb(c));
+          return;
+        }
+      }
+
       const params = new URLSearchParams();
+
       if (query && query.trim()) params.append('q', query.trim());
       if (status && status !== 'ALL') params.append('status', status);
       if (category && category !== 'ALL') params.append('category', category);
@@ -726,9 +738,11 @@ function isLegacyMockRecord(i: any): boolean {
     const strId = String(id);
     try {
       await deleteInspectionFromDb(strId);
+      deleteInspectionFromFirebase(strId);
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       await apiCall(`/inspections/${strId}`, { method: 'DELETE', headers }).catch(() => {});
+
       
       try {
         if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -1123,8 +1137,10 @@ function isLegacyMockRecord(i: any): boolean {
       };
       
       saveInspectionToDb(newRecord);
+      saveInspectionToFirebase(newRecord);
       setActiveInspectionDirect(newRecord);
       setInspections(prev => [newRecord, ...prev]);
+
       setSelectedInspectionId(newId);
       setCommodityName('');
       setScannedImages([]);
@@ -1229,8 +1245,10 @@ function isLegacyMockRecord(i: any): boolean {
       };
 
       saveInspectionToDb(fallbackRecord);
+      saveInspectionToFirebase(fallbackRecord);
       setActiveInspectionDirect(fallbackRecord);
       setInspections(prev => [fallbackRecord, ...prev]);
+
       setSelectedInspectionId(offlineId);
       setCommodityName('');
       setCurrentPage('inspection');
@@ -1278,6 +1296,8 @@ function isLegacyMockRecord(i: any): boolean {
 
     // 2. Persist to permanent client storage (IndexedDB)
     await saveInspectionToDb(updatedItem);
+    saveInspectionToFirebase(updatedItem);
+
 
     // 3. Persist to backend server (PUT /api/inspections/{id})
     try {

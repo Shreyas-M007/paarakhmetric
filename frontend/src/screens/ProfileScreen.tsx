@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Moon, Sun, X, Check, Phone, Mail, CheckCircle2, Globe } from 'lucide-react';
+import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Moon, Sun, X, Check, Phone, Mail, CheckCircle2, Globe, Database, Cloud } from 'lucide-react';
 
 import StatGrid from '../components/StatGrid';
 
+
 import { Language, translations } from '../i18n';
+import { getStoredFirebaseConfig, saveStoredFirebaseConfig, isFirebaseConfigured } from '../utils/firebase';
+
 
 interface ProfileScreenProps {
   user: any;
@@ -50,6 +53,12 @@ export default function ProfileScreen({
   const [region, setRegion] = useState(user?.jurisdiction || user?.region || 'Central Enforcement Zone');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Firebase state
+  const [firebaseConfig, setFirebaseConfig] = useState<any>(() => getStoredFirebaseConfig());
+  const [firebaseConfigInput, setFirebaseConfigInput] = useState('');
+  const [firebaseConnected, setFirebaseConnected] = useState(() => isFirebaseConfigured());
+  const [showFirebaseModal, setShowFirebaseModal] = useState(false);
+
   useEffect(() => {
     if (user) {
       if (user.name) setName(user.name);
@@ -60,6 +69,38 @@ export default function ProfileScreen({
       else if (user.region) setRegion(user.region);
     }
   }, [user]);
+
+  const handleSaveFirebaseConfig = () => {
+    try {
+      let cfg: any = null;
+      const trimmed = firebaseConfigInput.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        cfg = JSON.parse(trimmed);
+      } else {
+        const apiKey = trimmed.match(/apiKey\s*:\s*["']([^"']+)["']/)?.[1];
+        const projectId = trimmed.match(/projectId\s*:\s*["']([^"']+)["']/)?.[1];
+        const storageBucket = trimmed.match(/storageBucket\s*:\s*["']([^"']+)["']/)?.[1];
+        const appId = trimmed.match(/appId\s*:\s*["']([^"']+)["']/)?.[1];
+        const authDomain = trimmed.match(/authDomain\s*:\s*["']([^"']+)["']/)?.[1] || (projectId ? `${projectId}.firebaseapp.com` : '');
+        if (apiKey && projectId) {
+          cfg = { apiKey, projectId, storageBucket, appId, authDomain };
+        }
+      }
+      if (cfg && cfg.apiKey && cfg.projectId) {
+        saveStoredFirebaseConfig(cfg);
+        setFirebaseConfig(cfg);
+        setFirebaseConnected(true);
+        setShowFirebaseModal(false);
+        setFirebaseConfigInput('');
+        alert('🎉 Firebase connected successfully! Real-time cross-device sync and cloud photo storage are now active.');
+      } else {
+        alert('Please paste the complete firebaseConfig object or JSON snippet from the Firebase Console.');
+      }
+    } catch (err: any) {
+      alert('Error parsing Firebase config: ' + err.message);
+    }
+  };
+
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,6 +292,44 @@ export default function ProfileScreen({
               { id: 'version', label: t.appVersionLabel, value: '1.0.0' }
             ]} 
           />
+
+          {/* Firebase Realtime Sync Status & Setup */}
+          <div className="bg-surface rounded-2xl p-4 border border-divider flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-accent" />
+                <span className="text-xs font-bold text-fg">Firebase Realtime Sync</span>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                firebaseConnected 
+                  ? 'bg-success/15 text-success border-success/30' 
+                  : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${firebaseConnected ? 'bg-success animate-pulse' : 'bg-amber-500'}`}></span>
+                {firebaseConnected ? 'Active' : 'Offline / Local'}
+              </span>
+            </div>
+            
+            {firebaseConnected ? (
+              <p className="text-[11px] text-fg-muted leading-relaxed">
+                Connected to project <strong className="text-fg">{firebaseConfig?.projectId || 'Cloud'}</strong>. Inspections and photos sync live across phone and laptop in &lt;1 second.
+              </p>
+            ) : (
+              <p className="text-[11px] text-fg-muted leading-relaxed">
+                Connect your free Firebase project for zero-latency cross-device sync and permanent photo CDN storage.
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowFirebaseModal(true)}
+              className="w-full bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Cloud className="w-3.5 h-3.5" />
+              <span>{firebaseConnected ? '⚙️ Manage Firebase Config' : '⚡ Connect Free Firebase'}</span>
+            </button>
+          </div>
+
 
           {onClearCache && (
             <button 
@@ -607,6 +686,68 @@ export default function ProfileScreen({
           </div>
         </div>
       )}
+
+      {/* Firebase Setup Modal */}
+      {showFirebaseModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-surface rounded-2xl p-6 border border-divider flex flex-col gap-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-accent" />
+                <h3 className="font-display text-lg font-bold text-fg">Firebase Cloud Setup</h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowFirebaseModal(false)} 
+                className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-fg-muted hover:text-fg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-fg-muted leading-relaxed">
+              Paste the <code className="text-accent font-mono">firebaseConfig</code> object snippet from your 
+              <strong> Firebase Console &gt; Project Settings &gt; General &gt; Your Apps</strong>:
+            </p>
+
+            <textarea
+              rows={6}
+              value={firebaseConfigInput}
+              onChange={(e) => setFirebaseConfigInput(e.target.value)}
+              placeholder={`const firebaseConfig = {\n  apiKey: "AIzaSy...",\n  projectId: "paarakhmetric",\n  storageBucket: "paarakhmetric.firebasestorage.app"\n};`}
+              className="w-full bg-canvas text-fg font-mono text-xs p-3 rounded-xl border border-divider focus:border-accent outline-none"
+            />
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSaveFirebaseConfig}
+                className="flex-1 py-3 rounded-xl bg-accent text-on-accent font-bold text-xs cursor-pointer active:scale-95 transition-transform"
+              >
+                ⚡ Save & Connect Live Database
+              </button>
+
+              {firebaseConnected && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Disconnect Firebase and revert to local/fallback mode?')) {
+                      localStorage.removeItem('paarakhmetric_firebase_config');
+                      setFirebaseConfig(null);
+                      setFirebaseConnected(false);
+                      setShowFirebaseModal(false);
+                    }
+                  }}
+                  className="py-3 px-4 rounded-xl bg-error/15 text-error border border-error/30 font-bold text-xs cursor-pointer"
+                >
+                  Disconnect
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+
 }
