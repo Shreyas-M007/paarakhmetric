@@ -78,42 +78,51 @@ export default function ScanScreen({
 
   const resizeFileImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const rawUrl = e.target?.result as string;
-        if (!rawUrl) return resolve('');
+      try {
+        const objectUrl = URL.createObjectURL(file);
         const img = new Image();
         img.onload = () => {
-          const maxDim = 1280;
-          let w = img.width;
-          let h = img.height;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            } else {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
+          try {
+            const maxDim = 1280;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
             }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.82));
-          } else {
-            resolve(rawUrl);
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'medium';
+              ctx.drawImage(img, 0, 0, w, h);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.80);
+              URL.revokeObjectURL(objectUrl);
+              resolve(dataUrl);
+            } else {
+              URL.revokeObjectURL(objectUrl);
+              resolve(objectUrl);
+            }
+          } catch {
+            URL.revokeObjectURL(objectUrl);
+            resolve('');
           }
         };
-        img.onerror = () => resolve(rawUrl);
-        img.src = rawUrl;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve('');
+        };
+        img.src = objectUrl;
+      } catch {
+        resolve('');
+      }
     });
   };
 
@@ -140,7 +149,6 @@ export default function ScanScreen({
       }
     }
   };
-
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -178,11 +186,12 @@ export default function ScanScreen({
             Attach multiple photos for complete verification (e.g. Front PDP, Back Label, MRP/MFD Cap)
           </span>
         </div>
-        <button onClick={onBack}
+        <button type="button" onClick={onBack}
           className="text-xs font-bold text-accent hover:underline px-3.5 py-2 rounded-xl bg-surface border border-divider cursor-pointer">
           {t.cancel || "Cancel"}
         </button>
       </section>
+
 
 
 
@@ -231,6 +240,7 @@ export default function ScanScreen({
                   <div className="absolute top-3 right-3 flex items-center gap-2">
                     {onClearImages && (
                       <button
+                        type="button"
                         onClick={onClearImages}
                         className="bg-black/80 hover:bg-black text-error text-xs font-bold px-3 py-1.5 rounded-xl border border-error/30 flex items-center gap-1.5 shadow-lg cursor-pointer transition-colors"
                       >
@@ -286,6 +296,7 @@ export default function ScanScreen({
                     </span>
                     {onRemoveImage && (
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           onRemoveImage(img.id);
@@ -297,6 +308,7 @@ export default function ScanScreen({
                     )}
                   </div>
                 ))}
+
 
                 {/* + Add Another Photo Tile */}
                 <button
@@ -454,6 +466,7 @@ export default function ScanScreen({
                 const isAttached = scannedImages.some(img => img.panel === p.name);
                 return (
                   <button 
+                    type="button"
                     key={p.name} 
                     onClick={() => setActiveSide(p.name)}
                     className={`py-2 px-2.5 rounded-xl text-xs font-semibold transition-all border flex items-center justify-between gap-1 cursor-pointer ${
@@ -499,8 +512,9 @@ export default function ScanScreen({
 
           {/* Run Multi-Photo AI Verification Button */}
           {hasPhotos ? (
-            <button onClick={processImage} disabled={isProcessing}
+            <button type="button" onClick={processImage} disabled={isProcessing}
               className="w-full bg-accent text-on-accent font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 text-base active:scale-95 transition-transform disabled:opacity-50 shadow-xl shadow-accent/20 cursor-pointer">
+
               {isProcessing ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />

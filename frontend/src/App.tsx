@@ -244,28 +244,40 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState<string>('password123');
   const [loginError, setLoginError] = useState<string>('');
 
-  // --- Navigation ---
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  // --- Navigation with mobile resume persistence ---
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    try {
+      const hash = (typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '') as Page;
+      if (['dashboard', 'scan', 'history', 'inspection', 'reports', 'profile'].includes(hash)) {
+        return hash;
+      }
+      const saved = (typeof window !== 'undefined' ? sessionStorage.getItem('paarakhmetric_page') : null) as Page;
+      if (saved && ['dashboard', 'scan', 'history', 'inspection', 'reports', 'profile'].includes(saved)) {
+        return saved;
+      }
+    } catch {}
+    return 'dashboard';
+  });
 
-// Helper to completely eradicate legacy demo/mock data
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('paarakhmetric_page', currentPage);
+        window.location.hash = currentPage;
+      }
+    } catch {}
+  }, [currentPage]);
+
+
+// Helper to filter out only known static demo items without touching real scanned IDs
 function isLegacyMockRecord(i: any): boolean {
-
-  if (!i) return true;
-  const strId = String(i.id || '');
-  if (['8042', '8041', '8040', '8039', '8038', '1', '2', '3', '4', '5'].includes(strId)) {
-    return true;
-  }
+  if (!i) return false;
   const title = (i.product?.name || i.title || '').toLowerCase();
   const mockKeywords = [
-    'premium basmati',
-    'basmati rice',
-    'choco bites',
-    'cold-pressed',
-    'snack-o',
-    'herbal glow',
-    'fresh cow milk'
+    'premium basmati rice',
+    'choco bites family pack'
   ];
-  return mockKeywords.some(m => title.includes(m));
+  return mockKeywords.some(m => title === m || title.includes(m));
 }
 
   // --- Data ---
@@ -284,21 +296,10 @@ function isLegacyMockRecord(i: any): boolean {
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
 
-  // Load complete inspections and photos from IndexedDB on mount, purging all legacy mocks
+  // Load complete inspections and photos from IndexedDB on mount
   useEffect(() => {
-    // 1. Proactively purge all known mock IDs from IndexedDB
-    ['8042', '8041', '8040', '8039', '8038', '1', '2', '3', '4', '5'].forEach(id => {
-      deleteInspectionFromDb(id);
-    });
-
-    // 2. Read IndexedDB and sanitize
     getAllInspectionsFromDb().then(stored => {
       if (!stored) return;
-      stored.forEach(s => {
-        if (isLegacyMockRecord(s)) {
-          deleteInspectionFromDb(s.id);
-        }
-      });
       const validStored = stored.filter(s => !isLegacyMockRecord(s));
       if (validStored.length > 0) {
         setInspections(prev => {
@@ -314,6 +315,7 @@ function isLegacyMockRecord(i: any): boolean {
       }
     });
   }, []);
+
 
 
 
@@ -603,21 +605,17 @@ function isLegacyMockRecord(i: any): boolean {
     }
   };
 
-  const handleClearLocalCache = async () => {
-    localStorage.removeItem('paarakhmetric_inspections');
-    if (typeof window !== 'undefined' && window.indexedDB) {
-      try {
-        const dbs = await (window.indexedDB as any).databases?.() || [];
-        for (const db of dbs) {
-          if (db.name) window.indexedDB.deleteDatabase(db.name);
-        }
-      } catch {
-        window.indexedDB.deleteDatabase('paarakhmetric_db');
+  const handleForceSyncWithCloud = async () => {
+    try {
+      const allStored = await getAllInspectionsFromDb();
+      const validStored = (allStored || []).filter(s => !isLegacyMockRecord(s));
+      for (const item of validStored) {
+        await pushInspectionToCloud(item);
       }
-    }
-    setInspections([]);
+    } catch {}
     await fetchInspections();
   };
+
 
   // ============================================================
   //  DATA FETCHING
@@ -1555,11 +1553,12 @@ function isLegacyMockRecord(i: any): boolean {
             currentTheme={theme}
             setTheme={setTheme}
             onUpdateUser={handleUpdateUser}
-            onClearCache={handleClearLocalCache}
+            onClearCache={handleForceSyncWithCloud}
             language={language}
             setLanguage={setLanguage}
           />
         )}
+
 
 
       </Layout>
