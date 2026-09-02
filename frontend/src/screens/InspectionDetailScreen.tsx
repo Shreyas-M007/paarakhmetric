@@ -189,11 +189,8 @@ export default function InspectionDetailScreen({
                   <span className="inline-flex items-center gap-1.5 font-medium text-fg">
                     <span className="text-accent font-semibold">👤 Scanned by: {officerDetails.name}</span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-accent/15 text-accent border border-accent/30">
-                      {officerDetails.role}
+                      {officerDetails.title}
                     </span>
-                  </span>
-                  <span className="text-fg-muted">
-                    ({officerDetails.designation})
                   </span>
                   {officerDetails.badge && (
                     <span className="font-mono text-[10px] bg-surface-elevated px-1.5 py-0.5 rounded border border-divider">
@@ -204,6 +201,7 @@ export default function InspectionDetailScreen({
                     <span>· {officerDetails.jurisdiction}</span>
                   )}
                 </div>
+
               </>
 
             ) : (
