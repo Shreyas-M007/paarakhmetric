@@ -76,33 +76,71 @@ export default function ScanScreen({
     { name: 'right', label: t.rightSide || 'Right Side' },
   ];
 
-  const handleProcessFiles = (files: FileList | File[]) => {
+  const resizeFileImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rawUrl = e.target?.result as string;
+        if (!rawUrl) return resolve('');
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1280;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+          } else {
+            resolve(rawUrl);
+          }
+        };
+        img.onerror = () => resolve(rawUrl);
+        img.src = rawUrl;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleProcessFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     if (cameraActive) stopCamera();
 
-    Array.from(files).forEach((file, index) => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          const url = e.target.result as string;
-          // Assign panel sequentially or use activeSide
-          const targetPanel = index === 0 ? activeSide : (panels[index % panels.length]?.name || 'additional');
-          if (onAddImage) {
-            onAddImage(url, targetPanel);
-          } else {
-            setCapturedImage(url);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
+    const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
+    for (let index = 0; index < fileList.length; index++) {
+      const file = fileList[index];
+      const optimizedUrl = await resizeFileImage(file);
+      if (!optimizedUrl) continue;
+
+      const targetPanel = index === 0 ? activeSide : (panels[index % panels.length]?.name || 'additional');
+      if (onAddImage) {
+        onAddImage(optimizedUrl, targetPanel);
+      } else {
+        setCapturedImage(optimizedUrl);
+      }
 
       if (!commodityName.trim() && index === 0) {
         const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
         setCommodityName(cleanName);
       }
-    });
+    }
   };
+
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();

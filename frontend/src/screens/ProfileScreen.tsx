@@ -460,52 +460,83 @@ export default function ProfileScreen({
             </div>
 
             <div className="flex flex-col gap-3 text-xs text-fg-muted leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
-              {user?.role === 'controller' ? (
+              {user?.username === 'shreyas' ? (
                 <>
                   <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
                     <span className="text-fg font-bold text-sm text-accent">Apex Statutory Seizure & Notice Authority</span>
-                    <span>Empowered under Section 39 of the Legal Metrology Act 2009 to issue Form-1 statutory seizure orders, approve compounding of packaging infractions, and sanction confiscation of non-compliant commodities.</span>
+                    <span>Empowered under Section 39 of the Legal Metrology Act 2009 to issue Form-1 statutory seizure orders, approve compounding of packaging infractions, and sanction confiscation of non-compliant commodities statewide.</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
-                    <span className="text-fg font-bold text-sm">Statewide Jurisdiction & Appellate Control</span>
-                    <span>Executive command across all zonal enforcement wings, standards laboratories, and senior inspection divisions. Full registry oversight and audit ledger sign-off.</span>
+                    <span className="text-fg font-bold text-sm">Statewide Directorate & Appellate Jurisdiction</span>
+                    <span>Apex executive command across all zonal enforcement divisions, regional standards laboratories, and senior inspection squads. Full audit ledger sign-off authority.</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
-                    <span className="text-fg font-bold text-sm">Officer Account Governance</span>
-                    <span>Administrative authority to reassign field jurisdictions, modify supervisory assignments, and govern credential registries.</span>
+                    <span className="text-fg font-bold text-sm">Officer Administration & Zonal Deployment</span>
+                    <span>Sole authority to provision official credentials, assign zonal jurisdictions, and sanction legal metrology prosecutions.</span>
                   </div>
                 </>
-              ) : user?.role === 'supervisor' ? (
+              ) : user?.username === 'harsha' ? (
+                <>
+                  <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm text-accent">Statutory Show-Cause & Seizure Notices</span>
+                    <span>Empowered under Section 39 to issue statutory show-cause notices, review field infraction dockets, and approve provisional seizure memos for central zone compliance.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Zonal Adjudication & Compliance Clearance</span>
+                    <span>Authority to adjudicate manufacturer representations, grant official clearance certificates, and oversee industrial packaging compliance sweeps.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Supervisory Squadron Oversight</span>
+                    <span>Command of enforcement units and coordination with standards laboratories for rapid testing under Packaged Commodities Rules 2011.</span>
+                  </div>
+                </>
+              ) : user?.username === 'sriraj' ? (
                 <>
                   <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
                     <span className="text-fg font-bold text-sm text-accent">Supervisory Field Verification & Audit</span>
-                    <span>Authorized to review, verify, and endorse inspection ledgers from Legal Metrology Officers, conduct spot supervisory checks, and recommend compliance clearance.</span>
+                    <span>Authorized to review, verify, and endorse inspection ledgers submitted by Legal Metrology Officers, conduct surprise supervisory audits, and recommend clearance.</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
                     <span className="text-fg font-bold text-sm">Standards Laboratory Referral Power</span>
-                    <span>Authorized to order official physical sample dispatch to Regional Standards Laboratories under Rule 18 for high-precision density, tare, and volume validation.</span>
+                    <span>Authorized to order official physical sample dispatch to Regional Standards Laboratories under Rule 18 for certified density, tare, and volume validation.</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
-                    <span className="text-fg font-bold text-sm">Direct Collectorate Escalation</span>
-                    <span>Statutory channel to escalate persistent or major non-compliance violations directly to the District Collector for compounding or prosecution.</span>
+                    <span className="text-fg font-bold text-sm">Collectorate Escalation Channel</span>
+                    <span>Statutory power to escalate persistent or major non-compliance violations directly to the District Collector for compounding or prosecution.</span>
                   </div>
                 </>
-              ) : (
+              ) : user?.username === 'spandana' ? (
                 <>
                   <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
                     <span className="text-fg font-bold text-sm text-accent">Field Inspection & Declaration Verification</span>
-                    <span>Authorized under Section 15 & Rule 6 to enter premises, verify physical packaged goods against legal declarations (MRP, Net Qty, Dates, Address), and log infractions.</span>
+                    <span>Authorized under Section 15 & Rule 6 to enter packaging, warehouse, and retail premises across North Field Division to inspect declarations (MRP, Net Qty, Dates, Address).</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
                     <span className="text-fg font-bold text-sm">AI Computer Vision & Multi-Panel Scanning</span>
                     <span>Authorized to operate automated OCR and deep-learning label validation across Principal Display Panels, inkjet batch stamps, and barcodes.</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
-                    <span className="text-fg font-bold text-sm">Flagging & Memo Issuance</span>
-                    <span>Authorized to flag non-compliant goods and issue preliminary inspection memos for supervisory endorsement.</span>
+                    <span className="text-fg font-bold text-sm">Spot Infraction Logging & Sampling</span>
+                    <span>Authorized to flag non-compliant goods, issue preliminary inspection memos, and submit sealed samples for supervisory verification.</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-3.5 rounded-xl bg-accent/10 border border-accent/30 flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm text-accent">Field Inspection & Declaration Verification</span>
+                    <span>Authorized under Section 15 & Rule 6 to inspect packaged goods, verify Unit Sale Price (USP), Net Quantity, and manufacturer declarations across South Field Division.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">AI Computer Vision & Physical Inspection</span>
+                    <span>Operating high-speed visual scanning across PDP panels, curved bases, and dot-matrix date stamps for instant compliance grading.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-surface-recessed border border-divider flex flex-col gap-1">
+                    <span className="text-fg font-bold text-sm">Spot Discrepancy Recording</span>
+                    <span>Authorized to record formal discrepancy notices, secure inspection samples, and transmit findings to the supervisory ledger.</span>
                   </div>
                 </>
               )}
+
             </div>
             <button onClick={() => setActiveModal(null)} className="w-full py-3 rounded-full bg-accent text-on-accent font-bold text-xs cursor-pointer">
               Close

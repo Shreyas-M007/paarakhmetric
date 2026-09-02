@@ -441,12 +441,42 @@ export default function App() {
     }
   }, [user]);
 
-  // Inspections persistence
+  // Live cross-device officer profile sync
   useEffect(() => {
-    if (inspections && inspections.length > 0) {
-      localStorage.setItem('paarakhmetric_inspections', JSON.stringify(inspections));
+    if (!user?.username) return;
+    apiCall(`/users/sync/${user.username}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(liveUser => {
+        if (liveUser && liveUser.username) {
+          setUser((prev: any) => ({
+            ...(prev || {}),
+            ...liveUser,
+            name: liveUser.full_name || liveUser.name || liveUser.username
+          }));
+        }
+      })
+      .catch(e => console.warn("Live profile sync notice:", e));
+  }, [user?.username]);
+
+  // Inspections persistence (guarded against QuotaExceededError)
+  useEffect(() => {
+    try {
+      if (inspections && inspections.length > 0) {
+        // Strip large base64 image data from localStorage to ensure quota safety
+        const safeInspections = inspections.map(i => {
+          if (i.image_url && i.image_url.length > 30000) {
+            const { image_url, images, ...rest } = i;
+            return rest;
+          }
+          return i;
+        });
+        localStorage.setItem('paarakhmetric_inspections', JSON.stringify(safeInspections));
+      }
+    } catch (e) {
+      console.warn("Storage quota protection engaged:", e);
     }
   }, [inspections]);
+
 
   const handleLogout = () => {
     setUser(null);
@@ -1077,24 +1107,36 @@ export default function App() {
   const handleUpdateUser = async (updated: any) => {
     setUser(updated);
     try {
+      const username = updated.username || user?.username;
+      const payload = {
+        full_name: updated.name || updated.full_name,
+        email: updated.email,
+        phone: updated.phone,
+        jurisdiction: updated.region || updated.jurisdiction,
+        badge_number: updated.badge_number,
+        designation: updated.designation
+      };
+
+      if (username) {
+        await apiCall(`/users/sync/${username}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
       await apiCall('/users/me', {
         method: 'PUT',
         headers,
-        body: JSON.stringify({
-          full_name: updated.name || updated.full_name,
-          email: updated.email,
-          phone: updated.phone,
-          jurisdiction: updated.region || updated.jurisdiction,
-          badge_number: updated.badge_number,
-          designation: updated.designation
-        })
+        body: JSON.stringify(payload)
       });
     } catch (e) {
       console.warn("Cloud profile sync notice:", e);
     }
   };
+
 
   // Main tabbed layout
   return (
@@ -1142,8 +1184,10 @@ export default function App() {
             onRowClick={viewInspection}
             onSearchClick={() => setCurrentPage('history')}
             language={language}
+            user={user}
           />
         )}
+
 
         {currentPage === 'profile' && (
           <ProfileScreen

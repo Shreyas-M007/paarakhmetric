@@ -39,7 +39,18 @@ export default function InspectionList({
   return (
     <section className="flex flex-col w-full">
       {title && <div className="text-[11px] tracking-[0.08em] uppercase text-fg-muted font-bold mb-3">{title}</div>}
-      <div className={gridMode ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "flex flex-col"}>
+      {inspections.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-8 text-center text-fg-muted bg-surface-elevated/20 rounded-xl border border-dashed border-divider">
+          <p className="text-xs font-semibold text-fg mb-1">
+            {language === 'hi' ? 'कोई निरीक्षण रिकॉर्ड नहीं मिला' : language === 'kn' ? 'ಯಾವುದೇ ತಪಾಸಣಾ ದಾಖಲೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ' : 'No inspection records found'}
+          </p>
+          <p className="text-[11px] text-fg-muted">
+            {language === 'hi' ? 'नया स्कैन शुरू करने के लिए कैमरा या गैलरी का उपयोग करें।' : language === 'kn' ? 'ಹೊಸ ತಪಾಸಣೆಗಾಗಿ ಕ್ಯಾಮೆರಾ ಅಥವಾ ಗ್ಯಾಲರಿ ಬಳಸಿ.' : 'Perform a new product scan to record audits in the ledger.'}
+          </p>
+        </div>
+      ) : (
+        <div className={gridMode ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "flex flex-col"}>
+
         {inspections.map(insp => {
           let badgeBorder = 'border-divider';
           const statText = getStatusTranslation(insp.status, language);
@@ -75,6 +86,8 @@ export default function InspectionList({
           );
         })}
       </div>
+      )}
     </section>
+
   );
 }

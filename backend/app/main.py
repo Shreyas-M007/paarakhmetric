@@ -340,19 +340,70 @@ def update_user_by_id(
         user.email = profile_data.email
     if profile_data.phone is not None:
         user.phone = profile_data.phone
-    if profile_data.badge_number is not None:
-        user.badge_number = profile_data.badge_number
     if profile_data.jurisdiction is not None:
         user.jurisdiction = profile_data.jurisdiction
+    if profile_data.badge_number is not None:
+        user.badge_number = profile_data.badge_number
     if profile_data.designation is not None:
         user.designation = profile_data.designation
-    if profile_data.role is not None:
-        user.role = profile_data.role
-    if profile_data.password:
-        user.hashed_password = hash_password(profile_data.password)
     db.commit()
     db.refresh(user)
-    return {"message": "User updated", "user": user}
+    return user
+
+@app.get("/users/sync/{username}")
+def sync_get_user_profile(username: str, db: Session = Depends(get_db)):
+    clean_u = username.lower().strip()
+    user = db.query(User).filter(User.username == clean_u).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role,
+        "full_name": user.full_name,
+        "name": user.full_name,
+        "designation": user.designation,
+        "jurisdiction": user.jurisdiction,
+        "region": user.jurisdiction,
+        "badge_number": user.badge_number,
+        "email": user.email,
+        "phone": user.phone
+    }
+
+@app.put("/users/sync/{username}")
+def sync_update_user_profile(username: str, profile_data: UserProfileUpdate, db: Session = Depends(get_db)):
+    clean_u = username.lower().strip()
+    user = db.query(User).filter(User.username == clean_u).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if profile_data.full_name is not None:
+        user.full_name = profile_data.full_name
+    if profile_data.email is not None:
+        user.email = profile_data.email
+    if profile_data.phone is not None:
+        user.phone = profile_data.phone
+    if profile_data.jurisdiction is not None:
+        user.jurisdiction = profile_data.jurisdiction
+    if profile_data.badge_number is not None:
+        user.badge_number = profile_data.badge_number
+    if profile_data.designation is not None:
+        user.designation = profile_data.designation
+    db.commit()
+    db.refresh(user)
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role,
+        "full_name": user.full_name,
+        "name": user.full_name,
+        "designation": user.designation,
+        "jurisdiction": user.jurisdiction,
+        "region": user.jurisdiction,
+        "badge_number": user.badge_number,
+        "email": user.email,
+        "phone": user.phone
+    }
+
 
 
 

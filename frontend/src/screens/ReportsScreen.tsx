@@ -11,10 +11,11 @@ interface ReportsScreenProps {
   onRowClick: (id: string) => void;
   onSearchClick?: () => void;
   language?: Language;
+  user?: any;
 }
 
-export default function ReportsScreen({ inspections, onRowClick, onSearchClick, language = 'en' }: ReportsScreenProps) {
-  const [selectedId, setSelectedId] = useState<string>(inspections[0]?.id || '8042');
+export default function ReportsScreen({ inspections, onRowClick, onSearchClick, language = 'en', user }: ReportsScreenProps) {
+  const [selectedId, setSelectedId] = useState<string>(inspections[0]?.id || '');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [analyticsView, setAnalyticsView] = useState<'trends' | 'categories' | 'violations'>('trends');
 
@@ -25,41 +26,82 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const activeInspection = inspections.find(i => i.id === selectedId) || inspections[0] || {
-    id: '8042',
-    title: 'Premium Basmati Rice',
-    meta: 'Food Grains · Warehouse A, New Delhi',
-    status: 'NON_COMPLIANT' as const,
-    timeInfo: 'Today'
-  };
+  const activeInspection = inspections.find(i => i.id === selectedId) || inspections[0] || null;
 
   // --- Aggregate Database Analytics across ALL Inspections ---
-  const totalAudits = inspections.length || 1;
+  const totalAudits = inspections.length;
   const compliantCount = inspections.filter(i => i.status === 'COMPLIANT').length;
   const nonCompliantCount = inspections.filter(i => i.status === 'NON_COMPLIANT').length;
   const reviewCount = inspections.filter(i => (i.status as string) === 'REVIEW' || (i.status as string) === 'REQUIRES_REVIEW').length;
 
-  const overallPassRate = Math.round((compliantCount / totalAudits) * 100);
-  const overallFailRate = Math.round((nonCompliantCount / totalAudits) * 100);
-  const overallReviewRate = Math.round((reviewCount / totalAudits) * 100);
+  const overallPassRate = totalAudits > 0 ? Math.round((compliantCount / totalAudits) * 100) : 0;
+  const overallFailRate = totalAudits > 0 ? Math.round((nonCompliantCount / totalAudits) * 100) : 0;
+  const overallReviewRate = totalAudits > 0 ? Math.round((reviewCount / totalAudits) * 100) : 0;
 
-  // Category Aggregates
-  const categoryStats = [
-    { name: language === 'hi' ? 'खाद्यान्न और दालें' : language === 'kn' ? 'ಆಹಾರ ಧಾನ್ಯಗಳು' : 'Food Grains & Pulses', rate: 74, count: 28 },
-    { name: language === 'hi' ? 'खाद्य तेल और वसा' : language === 'kn' ? 'ಖಾದ್ಯ ತೈಲಗಳು' : 'Edible Oils & Fats', rate: 88, count: 22 },
-    { name: language === 'hi' ? 'पैकेज्ड स्नैक्स' : language === 'kn' ? 'ಪ್ಯಾಕ್ ಮಾಡಿದ ತಿಂಡಿಗಳು' : 'Packaged Snacks', rate: 62, count: 35 },
-    { name: language === 'hi' ? 'पेय और डेयरी' : language === 'kn' ? 'ಪಾನೀಯಗಳು' : 'Beverages & Dairy', rate: 94, count: 19 },
-    { name: language === 'hi' ? 'प्रसाधन सामग्री' : language === 'kn' ? 'ಸೌಂದರ್ಯವರ್ಧಕಗಳು' : 'Cosmetics & Personal Care', rate: 81, count: 16 }
-  ];
+  // Real Dynamic Category Aggregates
+  const categoryStats = (() => {
+    if (inspections.length === 0) return [];
+    const map: Record<string, { count: number; pass: number }> = {};
+    inspections.forEach(i => {
+      const cat = i.meta?.split('·')?.[0]?.trim() || 'Packaged Commodity';
+      if (!map[cat]) map[cat] = { count: 0, pass: 0 };
+      map[cat].count += 1;
+      if (i.status === 'COMPLIANT') map[cat].pass += 1;
+    });
+    return Object.entries(map).map(([name, data]) => ({
+      name,
+      count: data.count,
+      rate: Math.round((data.pass / data.count) * 100)
+    }));
+  })();
 
-  // Top Statutory Rule Violations
-  const violationStats = [
-    { rule: 'Rule 6(1)(e) - MRP Missing / Tax Format', pct: 42, count: 34 },
-    { rule: 'Rule 12 - Net Qty Non-Standard Pack Size', pct: 28, count: 23 },
-    { rule: 'Rule 6(1)(n) - Consumer Care Helpline Omission', pct: 16, count: 13 },
-    { rule: 'Rule 6(1)(d) - Date of Packing / PKD Format', pct: 10, count: 8 },
-    { rule: 'Rule 6(1)(a) - Incomplete Manufacturer Address', pct: 4, count: 3 },
-  ];
+  // Real Dynamic Statutory Rule Violations from Ledger
+  const violationStats = (() => {
+    const nonComp = inspections.filter(i => i.status === 'NON_COMPLIANT');
+    if (nonComp.length === 0) return [];
+    const map: Record<string, number> = {};
+    nonComp.forEach(i => {
+      const rule = i.title ? `Rule 6 - ${i.title} Infraction` : 'Legal Metrology Infraction';
+      map[rule] = (map[rule] || 0) + 1;
+    });
+    return Object.entries(map).map(([rule, count]) => ({
+      rule,
+      count,
+      pct: Math.round((count / nonComp.length) * 100)
+    }));
+  })();
+
+  // Real Dynamic Timeline Aggregates
+  const timelineData = (() => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const dayMap: Record<string, { total: number; pass: number }> = {
+      Mon: { total: 0, pass: 0 },
+      Tue: { total: 0, pass: 0 },
+      Wed: { total: 0, pass: 0 },
+      Thu: { total: 0, pass: 0 },
+      Fri: { total: 0, pass: 0 },
+      Sat: { total: 0, pass: 0 },
+      Sun: { total: 0, pass: 0 }
+    };
+
+    inspections.forEach(i => {
+      const ts = (i as any).timestamp;
+      const d = ts ? new Date(ts) : new Date();
+      const dayName = days[(d.getDay() + 6) % 7];
+      if (dayMap[dayName]) {
+        dayMap[dayName].total += 1;
+        if (i.status === 'COMPLIANT') dayMap[dayName].pass += 1;
+      }
+    });
+
+    return days.map(day => ({
+      day,
+      total: dayMap[day].total,
+      pass: dayMap[day].pass,
+      rate: dayMap[day].total > 0 ? Math.round((dayMap[day].pass / dayMap[day].total) * 100) : 0
+    }));
+  })();
+
 
   const handleGeneratePdf = () => {
     const printWindow = window.open('', '_blank');
@@ -237,26 +279,20 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
                 </div>
 
                 <div className="flex items-end justify-between gap-3 h-28 pt-4 px-2 bg-surface-recessed/60 rounded-xl border border-divider/60">
-                  {[
-                    { day: 'Mon', total: 42, pass: 38, rate: 90 },
-                    { day: 'Tue', total: 56, pass: 47, rate: 84 },
-                    { day: 'Wed', total: 68, pass: 51, rate: 75 },
-                    { day: 'Thu', total: 84, pass: 78, rate: 93 },
-                    { day: 'Fri', total: 95, pass: 62, rate: 65 },
-                    { day: 'Sat', total: 72, pass: 64, rate: 89 },
-                    { day: 'Sun', total: 50, pass: 46, rate: 92 }
-                  ].map((item, idx) => (
+                  {timelineData.map((item, idx) => (
                     <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group">
                       <div className="relative w-full flex items-end justify-center h-20 bg-surface-elevated/40 rounded-md overflow-hidden">
                         <div 
-                          style={{ height: `${item.rate}%` }} 
+                          style={{ height: `${item.total > 0 ? Math.max(item.rate, 15) : 0}%` }} 
                           className={`w-full transition-all duration-500 rounded-t ${
-                            item.rate >= 85 ? 'bg-success' : item.rate >= 70 ? 'bg-warning' : 'bg-error'
+                            item.total === 0 ? 'bg-transparent' : item.rate >= 85 ? 'bg-success' : item.rate >= 70 ? 'bg-warning' : 'bg-error'
                           }`} 
                         />
-                        <div className="absolute -top-7 bg-fg text-canvas text-[10px] font-bold px-2 py-0.5 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
-                          {item.pass}/{item.total} ({item.rate}%)
-                        </div>
+                        {item.total > 0 && (
+                          <div className="absolute -top-7 bg-fg text-canvas text-[10px] font-bold px-2 py-0.5 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+                            {item.pass}/{item.total} ({item.rate}%)
+                          </div>
+                        )}
                       </div>
                       <span className="text-[10px] font-bold text-fg-muted font-mono">{item.day}</span>
                     </div>
@@ -272,24 +308,30 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
                   {language === 'hi' ? 'वस्तु श्रेणी द्वारा अनुपालन दर तुलना' : language === 'kn' ? 'ಸರಕು ವರ್ಗವಾರು ಅನುಸರಣೆ ಹೋಲಿಕೆ' : 'Category Compliance Comparison across all packaged commodities'}
                 </div>
 
-                <div className="flex flex-col gap-2.5">
-                  {categoryStats.map((cat, idx) => (
-                    <div key={idx} className="bg-surface-recessed/60 p-3 rounded-xl border border-divider/60 flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-fg">{cat.name}</span>
-                        <span className="font-mono font-bold text-fg">{cat.rate}% Pass · {cat.count} Audits</span>
+                {categoryStats.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-fg-muted bg-surface-recessed/40 rounded-xl border border-dashed border-divider">
+                    No commodity categories logged yet.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {categoryStats.map((cat, idx) => (
+                      <div key={idx} className="bg-surface-recessed/60 p-3 rounded-xl border border-divider/60 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-fg">{cat.name}</span>
+                          <span className="font-mono font-bold text-fg">{cat.rate}% Pass · {cat.count} Audits</span>
+                        </div>
+                        <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
+                          <div 
+                            style={{ width: `${cat.rate}%` }} 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              cat.rate >= 85 ? 'bg-success' : cat.rate >= 70 ? 'bg-warning' : 'bg-error'
+                            }`}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
-                        <div 
-                          style={{ width: `${cat.rate}%` }} 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            cat.rate >= 85 ? 'bg-success' : cat.rate >= 70 ? 'bg-warning' : 'bg-error'
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -297,25 +339,31 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
             {analyticsView === 'violations' && (
               <div className="flex flex-col gap-3 pt-2">
                 <div className="text-xs text-fg-muted">
-                  {language === 'hi' ? 'शीर्ष 5 सबसे लगातार वैधानिक उल्लंघन' : language === 'kn' ? 'ಅತ್ಯಂತ ಸಾಮಾನ್ಯ ಕಾನೂನು ಉಲ್ಲಂಘನೆಗಳು' : 'Top 5 Most Prevalent Statutory Violations across all audits'}
+                  {language === 'hi' ? 'शीर्ष सबसे लगातार वैधानिक उल्लंघन' : language === 'kn' ? 'ಅತ್ಯಂತ ಸಾಮಾನ್ಯ ಕಾನೂನು ಉಲ್ಲಂಘನೆಗಳು' : 'Statutory Infractions logged across ledger'}
                 </div>
 
-                <div className="flex flex-col gap-2.5">
-                  {violationStats.map((viol, idx) => (
-                    <div key={idx} className="bg-surface-recessed/60 p-3 rounded-xl border border-divider/60 flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-fg truncate">{viol.rule}</span>
-                        <span className="font-mono font-bold text-error ml-2 flex-shrink-0">{viol.pct}% ({viol.count})</span>
+                {violationStats.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-fg-muted bg-surface-recessed/40 rounded-xl border border-dashed border-divider">
+                    No statutory violations recorded. All ledger commodities comply with LMPC rules.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2.5">
+                    {violationStats.map((viol, idx) => (
+                      <div key={idx} className="bg-surface-recessed/60 p-3 rounded-xl border border-divider/60 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-fg truncate">{viol.rule}</span>
+                          <span className="font-mono font-bold text-error ml-2 flex-shrink-0">{viol.pct}% ({viol.count})</span>
+                        </div>
+                        <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
+                          <div 
+                            style={{ width: `${viol.pct}%` }} 
+                            className="h-full bg-error rounded-full transition-all duration-500"
+                          />
+                        </div>
                       </div>
-                      <div className="w-full h-2 bg-surface-elevated rounded-full overflow-hidden">
-                        <div 
-                          style={{ width: `${viol.pct * 2}%` }} 
-                          className="h-full bg-error rounded-full transition-all duration-500"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -325,77 +373,88 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
         <div className="lg:col-span-5 flex flex-col gap-5">
           {/* Single Inspection Report Export Card */}
           <section className="bg-surface rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden border border-divider/60 shadow-sm">
-            {/* Record Selector and Prev / Next Navigator */}
-            <div className="flex items-center justify-between gap-2 border-b border-divider/60 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-bold">
-                  {language === 'hi' ? 'चयनित रिकॉर्ड' : language === 'kn' ? 'ಆಯ್ಕೆಮಾಡಿದ ತಪಾಸಣೆ' : 'Selected Record'}
-                </span>
-                <select 
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                  className="bg-surface-elevated text-fg text-xs font-bold font-mono px-2 py-1 rounded-lg border border-divider outline-none cursor-pointer hover:border-accent"
-                >
-                  {inspections.map((item, idx) => (
-                    <option key={item.id} value={item.id}>
-                      #{item.id} · {item.title} ({idx + 1}/{inspections.length})
-                    </option>
-                  ))}
-                </select>
+            {!activeInspection ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center text-fg-muted">
+                <FileText className="w-10 h-10 text-fg-muted/40 mb-2" />
+                <span className="text-sm font-semibold text-fg">No Inspection Selected</span>
+                <span className="text-xs text-fg-muted mt-1">Scan a product to generate an official statutory report.</span>
               </div>
+            ) : (
+              <>
+                {/* Record Selector and Prev / Next Navigator */}
+                <div className="flex items-center justify-between gap-2 border-b border-divider/60 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] tracking-[0.08em] uppercase text-fg-muted font-bold">
+                      {language === 'hi' ? 'चयनित रिकॉर्ड' : language === 'kn' ? 'ಆಯ್ಕೆಮಾಡಿದ ತಪಾಸಣೆ' : 'Selected Record'}
+                    </span>
+                    <select 
+                      value={selectedId}
+                      onChange={(e) => setSelectedId(e.target.value)}
+                      className="bg-surface-elevated text-fg text-xs font-bold font-mono px-2 py-1 rounded-lg border border-divider outline-none cursor-pointer hover:border-accent"
+                    >
+                      {inspections.map((item, idx) => (
+                        <option key={item.id} value={item.id}>
+                          #{item.id} · {item.title} ({idx + 1}/{inspections.length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Prev / Next Buttons */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    const currentIndex = inspections.findIndex(i => i.id === selectedId);
-                    if (currentIndex > 0) {
-                      setSelectedId(inspections[currentIndex - 1].id);
-                    }
-                  }}
-                  disabled={inspections.findIndex(i => i.id === selectedId) <= 0}
-                  className="p-1.5 rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  title="Previous Inspection"
-                >
-                  ←
-                </button>
-                <span className="text-xs font-mono font-bold text-fg-muted px-1">
-                  {Math.max(1, inspections.findIndex(i => i.id === selectedId) + 1)} / {inspections.length}
-                </span>
-                <button
-                  onClick={() => {
-                    const currentIndex = inspections.findIndex(i => i.id === selectedId);
-                    if (currentIndex >= 0 && currentIndex < inspections.length - 1) {
-                      setSelectedId(inspections[currentIndex + 1].id);
-                    }
-                  }}
-                  disabled={inspections.findIndex(i => i.id === selectedId) >= inspections.length - 1}
-                  className="p-1.5 rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  title="Next Inspection"
-                >
-                  →
-                </button>
-              </div>
-            </div>
+                  {/* Prev / Next Buttons */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        const currentIndex = inspections.findIndex(i => i.id === selectedId);
+                        if (currentIndex > 0) {
+                          setSelectedId(inspections[currentIndex - 1].id);
+                        }
+                      }}
+                      disabled={inspections.findIndex(i => i.id === selectedId) <= 0}
+                      className="p-1.5 rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      title="Previous Inspection"
+                    >
+                      ←
+                    </button>
+                    <span className="text-xs font-mono font-bold text-fg-muted px-1">
+                      {Math.max(1, inspections.findIndex(i => i.id === selectedId) + 1)} / {inspections.length}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const currentIndex = inspections.findIndex(i => i.id === selectedId);
+                        if (currentIndex >= 0 && currentIndex < inspections.length - 1) {
+                          setSelectedId(inspections[currentIndex + 1].id);
+                        }
+                      }}
+                      disabled={inspections.findIndex(i => i.id === selectedId) >= inspections.length - 1}
+                      className="p-1.5 rounded-lg bg-surface-elevated text-fg-muted hover:text-fg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      title="Next Inspection"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
 
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-semibold text-accent">
-                #{activeInspection.id}
-              </span>
-              <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${
-                activeInspection.status === 'COMPLIANT' ? 'text-success' : activeInspection.status === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning'
-              }`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                {getStatusTranslation(activeInspection.status, language)}
-              </span>
-            </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-semibold text-accent">
+                    #{activeInspection.id}
+                  </span>
+                  <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold tracking-[0.02em] bg-transparent border border-divider ${
+                    activeInspection.status === 'COMPLIANT' ? 'text-success' : activeInspection.status === 'NON_COMPLIANT' ? 'text-error font-bold' : 'text-warning'
+                  }`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    {getStatusTranslation(activeInspection.status, language)}
+                  </span>
+                </div>
 
-            <div>
-              <div className="font-display text-[22px] font-bold text-fg leading-tight">{activeInspection.title}</div>
-              <div className="text-[13px] whitespace-nowrap overflow-hidden text-ellipsis text-fg-muted mt-1">
-                {activeInspection.meta} · {t.officer} Shrey
-              </div>
-            </div>
+                <div>
+                  <div className="font-display text-[22px] font-bold text-fg leading-tight">{activeInspection.title}</div>
+                  <div className="text-[13px] whitespace-nowrap overflow-hidden text-ellipsis text-fg-muted mt-1">
+                    {activeInspection.meta} · {t.officer} {user?.name || user?.username || 'Enforcement Officer'}
+                  </div>
+                </div>
+              </>
+            )}
+
 
             <div className="flex gap-2.5">
               <button 
