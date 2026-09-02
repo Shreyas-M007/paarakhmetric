@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Language } from './i18n';
 import { mapBackendInspection, MappedInspection } from './utils/mapInspection';
-import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb } from './utils/storage';
+import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb, clearAllInspectionsFromDb } from './utils/storage';
+
 import { 
   initFirebase, 
   isFirebaseConfigured, 
@@ -294,7 +295,10 @@ function isLegacyMockRecord(i: any): boolean {
 
   // --- Data ---
   const [inspections, setInspections] = useState<any[]>(() => {
-    const saved = localStorage.getItem('paarakhmetric_inspections');
+    try {
+      localStorage.removeItem('paarakhmetric_inspections'); // purge deprecated key
+    } catch {}
+    const saved = localStorage.getItem('paarakhmetric_cloud_ledger_v1');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -308,42 +312,37 @@ function isLegacyMockRecord(i: any): boolean {
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
 
-
-
-  // Load complete inspections and photos from IndexedDB on mount
+  // Load inspections from IndexedDB ONLY if Firebase is not active (pure offline fallback)
   useEffect(() => {
-    getAllInspectionsFromDb().then(stored => {
-
-      if (!stored) return;
-      const validStored = stored.filter(s => !isLegacyMockRecord(s));
-      if (validStored.length > 0) {
-        setInspections(prev => {
-          const map = new Map<string, any>();
-          validStored.forEach(s => map.set(String(s.id), s));
-          prev.forEach(p => {
-            if (isLegacyMockRecord(p)) return;
-            const existing = map.get(String(p.id));
-            map.set(String(p.id), { ...existing, ...p, image_url: p.image_url || existing?.image_url });
-          });
-          return Array.from(map.values()).filter(i => !isLegacyMockRecord(i));
-        });
-      }
-    });
+    if (!isFirebaseConfigured()) {
+      getAllInspectionsFromDb().then(stored => {
+        if (!stored) return;
+        const validStored = stored.filter(s => !isLegacyMockRecord(s));
+        if (validStored.length > 0) {
+          setInspections(validStored);
+        }
+      });
+    }
   }, []);
-
 
   // Realtime Firebase Firestore cross-device subscription (< 250ms sync)
   useEffect(() => {
     initFirebase();
     if (isFirebaseConfigured()) {
-      const unsub = subscribeToInspections((fbInspections) => {
-        if (Array.isArray(fbInspections) && fbInspections.length > 0) {
+      const unsub = subscribeToInspections(async (fbInspections) => {
+        if (Array.isArray(fbInspections)) {
           const clean = fbInspections.filter(i => !isLegacyMockRecord(i));
           setInspections(clean);
           try {
-            localStorage.setItem('paarakhmetric_inspections', JSON.stringify(clean));
+            localStorage.setItem('paarakhmetric_cloud_ledger_v1', JSON.stringify(clean));
           } catch {}
-          clean.forEach(c => saveInspectionToDb(c));
+          // Keep IndexedDB synchronized with cloud (clear out any old ghosts)
+          try {
+            await clearAllInspectionsFromDb();
+            for (const c of clean) {
+              await saveInspectionToDb(c);
+            }
+          } catch {}
         }
       });
       return () => {
@@ -351,6 +350,7 @@ function isLegacyMockRecord(i: any): boolean {
       };
     }
   }, []);
+
 
 
 
@@ -569,7 +569,7 @@ function isLegacyMockRecord(i: any): boolean {
 
       // Also persist to localStorage
       try {
-        localStorage.setItem('paarakhmetric_inspections', JSON.stringify(inspections));
+        localStorage.setItem('paarakhmetric_cloud_ledger_v1', JSON.stringify(inspections));
       } catch {
         try {
           const safeInspections = inspections.map(i => {
@@ -579,13 +579,14 @@ function isLegacyMockRecord(i: any): boolean {
             }
             return i;
           });
-          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(safeInspections));
+          localStorage.setItem('paarakhmetric_cloud_ledger_v1', JSON.stringify(safeInspections));
         } catch (e) {
           console.warn("Storage quota warning:", e);
         }
       }
     }
   }, [inspections]);
+
 
 
   const handleLogout = () => {
@@ -649,10 +650,11 @@ function isLegacyMockRecord(i: any): boolean {
 
         setInspections(list);
         try {
-          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(list));
+          localStorage.setItem('paarakhmetric_cloud_ledger_v1', JSON.stringify(list));
         } catch {}
         list.forEach(c => saveInspectionToDb(c));
         return;
+
       }
 
 
@@ -777,10 +779,11 @@ function isLegacyMockRecord(i: any): boolean {
       setInspections(prev => {
         const remaining = prev.filter(i => String(i.id) !== strId);
         try {
-          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(remaining));
+          localStorage.setItem('paarakhmetric_cloud_ledger_v1', JSON.stringify(remaining));
         } catch {}
         return remaining;
       });
+
 
       // Clear all active selection state
       setActiveInspectionDirect(null);
