@@ -4,12 +4,14 @@ import {
   collection, 
   doc, 
   setDoc, 
+  getDoc,
   deleteDoc, 
   getDocs,
   onSnapshot, 
   Firestore,
   Unsubscribe
 } from 'firebase/firestore';
+
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
@@ -192,5 +194,91 @@ export async function clearAllInspectionsFromFirebase(): Promise<void> {
     console.warn('Firestore clear error:', err);
   }
 }
+
+/**
+ * Saves or updates an officer profile in Firestore across all devices.
+ */
+export async function saveUserProfileToFirebase(userData: any): Promise<boolean> {
+  if (!isFirebaseConfigured() || !db) return false;
+  try {
+    const username = (userData.username || '').toLowerCase().trim();
+    if (!username) return false;
+
+    const userDocRef = doc(db, 'users', username);
+    const payload: Record<string, any> = {
+      username,
+      name: userData.name || userData.full_name || '',
+      full_name: userData.name || userData.full_name || '',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      jurisdiction: userData.jurisdiction || userData.region || '',
+      region: userData.region || userData.jurisdiction || '',
+      role: userData.role || 'officer',
+      designation: userData.designation || 'Legal Metrology Officer',
+      badge_number: userData.badge_number || '',
+      updated_at: new Date().toISOString()
+    };
+
+    if (userData.password) {
+      payload.password = userData.password;
+    }
+
+    await setDoc(userDocRef, payload, { merge: true });
+    return true;
+  } catch (err) {
+    console.error('Firestore saveUserProfile error:', err);
+    return false;
+  }
+}
+
+/**
+ * Fetches an officer profile from Firestore.
+ */
+export async function getUserProfileFromFirebase(username: string): Promise<any | null> {
+  if (!isFirebaseConfigured() || !db) return null;
+  try {
+    const cleanUsername = (username || '').toLowerCase().trim();
+    if (!cleanUsername) return null;
+
+    const userDocRef = doc(db, 'users', cleanUsername);
+    const snap = await getDoc(userDocRef);
+    if (snap.exists()) {
+      return snap.data();
+    }
+    return null;
+  } catch (err) {
+    console.warn('Firestore getUserProfile error:', err);
+    return null;
+  }
+}
+
+/**
+ * Real-time continuous listener for officer profile changes across all devices.
+ */
+export function subscribeToUserProfile(username: string, onUpdate: (user: any) => void): Unsubscribe | null {
+  if (!isFirebaseConfigured() || !db) return null;
+  try {
+    const cleanUsername = (username || '').toLowerCase().trim();
+    if (!cleanUsername) return null;
+
+    const userDocRef = doc(db, 'users', cleanUsername);
+    const unsub = onSnapshot(userDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        onUpdate({
+          ...data,
+          name: data.full_name || data.name || data.username
+        });
+      }
+    }, (err) => {
+      console.warn('Firestore user subscription notice:', err);
+    });
+    return unsub;
+  } catch (err) {
+    console.warn('Firestore user subscription error:', err);
+    return null;
+  }
+}
+
 
 

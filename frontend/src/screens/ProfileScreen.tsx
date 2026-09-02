@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Moon, Sun, X, Check, Phone, Mail, CheckCircle2, Globe } from 'lucide-react';
+import { Settings, UserCog, ShieldCheck, LifeBuoy, LogOut, ArrowLeft, Moon, Sun, X, Check, Phone, Mail, CheckCircle2, Globe, KeyRound, AlertCircle } from 'lucide-react';
+
+
 
 import StatGrid from '../components/StatGrid';
 import { Language, translations } from '../i18n';
@@ -50,6 +52,9 @@ export default function ProfileScreen({
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [region, setRegion] = useState(user?.jurisdiction || user?.region || 'Central Enforcement Zone');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
@@ -64,9 +69,21 @@ export default function ProfileScreen({
   }, [user]);
 
   const handleSaveProfile = (e: React.FormEvent) => {
-
     e.preventDefault();
-    const updated = { 
+    setPasswordError('');
+
+    if (newPassword) {
+      if (newPassword.length < 4) {
+        setPasswordError('Password must be at least 4 characters long.');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setPasswordError('New password and confirm password do not match.');
+        return;
+      }
+    }
+
+    const updated: any = { 
       ...user, 
       name: name.trim(), 
       full_name: name.trim(),
@@ -75,15 +92,24 @@ export default function ProfileScreen({
       region: region.trim(),
       jurisdiction: region.trim() 
     };
+
+    if (newPassword) {
+      updated.password = newPassword.trim();
+    }
+
     if (onUpdateUser) {
       onUpdateUser(updated);
     }
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordError('');
       setActiveModal(null);
-    }, 600);
+    }, 700);
   };
+
 
 
   if (view === 'theme') {
@@ -442,12 +468,51 @@ export default function ProfileScreen({
                 />
               </div>
 
+              <div className="pt-2 border-t border-divider/60 flex flex-col gap-3">
+                <div className="flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-accent" />
+                  <span className="text-xs font-semibold text-fg">Security & Login Password</span>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-fg-muted">New Password (leave blank to keep current)</label>
+                  <input 
+                    type="password" 
+                    value={newPassword} 
+                    onChange={e => { setNewPassword(e.target.value); setPasswordError(''); }} 
+                    placeholder="Enter new password"
+                    className="mt-1 w-full bg-surface-recessed border border-divider rounded-xl px-3.5 py-2.5 text-fg text-sm outline-none focus:border-accent font-body"
+                  />
+                </div>
+
+                {newPassword.length > 0 && (
+                  <div>
+                    <label className="text-xs font-semibold text-fg-muted">Confirm New Password</label>
+                    <input 
+                      type="password" 
+                      value={confirmPassword} 
+                      onChange={e => { setConfirmPassword(e.target.value); setPasswordError(''); }} 
+                      placeholder="Confirm new password"
+                      className="mt-1 w-full bg-surface-recessed border border-divider rounded-xl px-3.5 py-2.5 text-fg text-sm outline-none focus:border-accent font-body"
+                    />
+                  </div>
+                )}
+
+                {passwordError && (
+                  <div className="p-3 rounded-xl bg-danger/15 border border-danger/30 text-danger text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    {passwordError}
+                  </div>
+                )}
+              </div>
+
               {savedSuccess && (
                 <div className="p-3 rounded-xl bg-success/15 border border-success/30 text-success text-xs font-semibold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" />
                   Profile updated successfully!
                 </div>
               )}
+
 
               <div className="flex gap-3 pt-2">
                 <button 

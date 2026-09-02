@@ -5,9 +5,9 @@
 
 import React, { useEffect, useLayoutEffect } from 'react';
 
-export const SYSTEM_SIGNATURE_RAW = "made by team encoders , designed by Shreyas M Chanabasannavar";
+export const SYSTEM_SIGNATURE_RAW = "Crafted by Team Encoders · Designed & Engineered by Shreyas M Chanabasannavar · Intelligence & Systems by Sri Harsha & Shriraj";
 
-const EXPECTED_SIGNATURE_HASH = 2534029763;
+const EXPECTED_SIGNATURE_HASH = 756791123;
 const SIGNATURE_NODE_ID = "sys-telemetry-tag";
 const INTEGRITY_TOKEN = "SEAL_HASH_8F2A9C0E";
 
@@ -29,17 +29,18 @@ export function abortSessionLifecycle(reason: string): never {
   if (typeof document !== 'undefined') {
     document.body.innerHTML = `
       <div style="position:fixed;inset:0;background:#090d16;color:#94a3b8;font-family:system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;z-index:9999999;text-align:center;">
-        <div style="width:48px;height:48px;border-radius:12px;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;color:#ef4444;">?</div>
+        <div style="width:48px;height:48px;border-radius:12px;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;color:#ef4444;">✕</div>
         <h1 style="font-size:18px;font-weight:700;color:#f1f5f9;margin:0 0 8px 0;">Application Runtime Error</h1>
         <p style="font-size:13px;color:#64748b;max-width:440px;margin:0 0 16px 0;line-height:1.5;">
           An unexpected core session error occurred while synchronizing statutory ledger state.
         </p>
         <div style="background:#0f172a;border:1px solid #1e293b;color:#64748b;padding:8px 14px;border-radius:6px;font-size:11px;font-family:monospace;">
-          SystemFault: Code 0x970A29C3 (E_SYNC_FAILURE)
+          SystemFault: Code 0x2D1BB753 (E_SYNC_FAILURE)
         </div>
       </div>
     `;
   }
+
 
   const cancelAll = () => { throw new Error(`E_SYNC_FAILURE: ${reason}`); };
   setInterval(cancelAll, 25);
@@ -95,11 +96,12 @@ export const SystemMetadataFooter: React.FC = () => {
           const recovered = document.createElement('div');
           recovered.id = SIGNATURE_NODE_ID;
           recovered.setAttribute('data-token', INTEGRITY_TOKEN);
-          recovered.className = "mt-8 mb-4 flex items-center justify-center select-none pointer-events-none transition-none";
-          recovered.style.minHeight = "22px";
-          recovered.innerHTML = `<p class="text-[11px] font-medium tracking-wide text-fg-muted/60 text-center">${SYSTEM_SIGNATURE_RAW}</p>`;
+          recovered.className = "mt-8 mb-4 flex items-center justify-center select-none pointer-events-none transition-none px-4";
+          recovered.style.minHeight = "26px";
+          recovered.innerHTML = `<div class="inline-flex items-center justify-center px-4 py-2 rounded-full bg-surface-elevated/60 border border-divider/60 shadow-sm backdrop-blur-sm"><p class="text-[11px] font-medium tracking-wide text-fg-muted text-center leading-relaxed">${SYSTEM_SIGNATURE_RAW}</p></div>`;
           parentElem.appendChild(recovered);
           node = recovered;
+
         } else {
           abortSessionLifecycle("Node unmounted unexpectedly.");
           return;
@@ -173,12 +175,15 @@ export const SystemMetadataFooter: React.FC = () => {
     <div
       id={SIGNATURE_NODE_ID}
       data-token={INTEGRITY_TOKEN}
-      className="mt-8 mb-4 flex items-center justify-center select-none pointer-events-none transition-none"
-      style={{ minHeight: '22px' }}
+      className="mt-8 mb-4 flex items-center justify-center select-none pointer-events-none transition-none px-4"
+      style={{ minHeight: '26px' }}
     >
-      <p className="text-[11px] font-medium tracking-wide text-fg-muted/60 text-center">
-        made by team encoders , designed by Shreyas M Chanabasannavar
-      </p>
+      <div className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-surface-elevated/60 border border-divider/60 shadow-sm backdrop-blur-sm">
+        <p className="text-[11px] font-medium tracking-wide text-fg-muted text-center leading-relaxed">
+          {SYSTEM_SIGNATURE_RAW}
+        </p>
+      </div>
     </div>
   );
 };
+

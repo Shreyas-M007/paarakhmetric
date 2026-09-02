@@ -9,8 +9,12 @@ import {
   subscribeToInspections, 
   saveInspectionToFirebase, 
   deleteInspectionFromFirebase,
-  getAllInspectionsFromFirebase 
+  getAllInspectionsFromFirebase,
+  saveUserProfileToFirebase,
+  getUserProfileFromFirebase,
+  subscribeToUserProfile
 } from './utils/firebase';
+
 
 
 
@@ -527,6 +531,45 @@ function isLegacyMockRecord(i: any): boolean {
       admin: { username: 'admin', role: 'controller', name: 'System Administrator', designation: 'Director General', jurisdiction: 'National Registry', badge_number: 'LM-DG-000', email: 'admin@legalmetrology.gov.in', phone: '+91 98450 11000' }
     };
 
+    // Check cloud Firestore for updated profile and password
+    try {
+      const cloudUser = await getUserProfileFromFirebase(cleanUsername);
+      if (cloudUser) {
+        // If a custom password was set in Firestore, verify it!
+        if (cloudUser.password && cloudUser.password !== cleanPassword) {
+          setLoginError('Invalid password. Please enter your updated credentials.');
+          return;
+        }
+
+        const base = officerCatalog[cleanUsername] || {
+          username: cleanUsername,
+          role: 'officer',
+          name: cleanUsername.charAt(0).toUpperCase() + cleanUsername.slice(1),
+          designation: 'Legal Metrology Officer',
+          jurisdiction: 'District Field Office',
+          badge_number: 'LM-001',
+          email: `${cleanUsername}@legalmetrology.gov.in`,
+          phone: '+91 98000 00000'
+        };
+
+        const merged = {
+          ...base,
+          ...cloudUser,
+          username: cleanUsername,
+          name: cloudUser.full_name || cloudUser.name || base.name || cleanUsername,
+          role: cloudUser.role || base.role || 'officer',
+          designation: cloudUser.designation || base.designation || 'Legal Metrology Officer',
+          jurisdiction: cloudUser.jurisdiction || cloudUser.region || base.jurisdiction || 'District Field Office',
+          badge_number: cloudUser.badge_number || base.badge_number || 'LM-001'
+        };
+
+        setUser(merged);
+        return;
+      }
+    } catch (err) {
+      console.warn("Firestore login check notice:", err);
+    }
+
     const matched = officerCatalog[cleanUsername] || {
       username: cleanUsername,
       role: 'officer',
@@ -551,10 +594,27 @@ function isLegacyMockRecord(i: any): boolean {
     }
   }, [user]);
 
-  // Live cross-device officer profile sync
+  // Live cross-device officer profile sync via Firestore
   useEffect(() => {
     if (!user?.username) return;
-    apiCall(`/users/sync/${user.username}`)
+    const cleanUsername = user.username.toLowerCase().trim();
+
+    // 1. Continuous realtime Firestore subscription across all devices
+    const unsub = subscribeToUserProfile(cleanUsername, (liveUser) => {
+      if (liveUser && liveUser.username) {
+        setUser((prev: any) => ({
+          ...(prev || {}),
+          ...liveUser,
+          name: liveUser.full_name || liveUser.name || prev?.name || cleanUsername,
+          jurisdiction: liveUser.jurisdiction || liveUser.region || prev?.jurisdiction,
+          phone: liveUser.phone || prev?.phone,
+          email: liveUser.email || prev?.email
+        }));
+      }
+    });
+
+    // 2. Fallback check to Render if online
+    apiCall(`/users/sync/${cleanUsername}`)
       .then(res => res.ok ? res.json() : null)
       .then(liveUser => {
         if (liveUser && liveUser.username) {
@@ -565,8 +625,13 @@ function isLegacyMockRecord(i: any): boolean {
           }));
         }
       })
-      .catch(e => console.warn("Live profile sync notice:", e));
+      .catch(() => {});
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, [user?.username]);
+
 
   // Inspections persistence: save to permanent IndexedDB (with full photo) + localStorage
   useEffect(() => {
@@ -1481,8 +1546,20 @@ function isLegacyMockRecord(i: any): boolean {
   const handleUpdateUser = async (updated: any) => {
     setUser(updated);
     try {
+      localStorage.setItem('paarakhmetric_user', JSON.stringify(updated));
+    } catch (_) {}
+
+    // 1. Direct cross-device cloud persistence via Firestore
+    try {
+      await saveUserProfileToFirebase(updated);
+    } catch (err) {
+      console.warn("Firestore profile sync error:", err);
+    }
+
+    // 2. Fallback backend sync if Render is reachable
+    try {
       const username = updated.username || user?.username;
-      const payload = {
+      const payload: Record<string, any> = {
         full_name: updated.name || updated.full_name,
         email: updated.email,
         phone: updated.phone,
@@ -1490,6 +1567,9 @@ function isLegacyMockRecord(i: any): boolean {
         badge_number: updated.badge_number,
         designation: updated.designation
       };
+      if (updated.password) {
+        payload.password = updated.password;
+      }
 
       if (username) {
         await apiCall(`/users/sync/${username}`, {
@@ -1510,6 +1590,7 @@ function isLegacyMockRecord(i: any): boolean {
       console.warn("Cloud profile sync notice:", e);
     }
   };
+
 
 
   // Main tabbed layout
