@@ -162,6 +162,20 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
         : `<tr><td colspan="3" style="padding: 16px; text-align: center; color: #64748b; font-style: italic;">All standard statutory requirements satisfied.</td></tr>`;
 
 
+      const formatOfficialDate = (ts?: string) => {
+        const d = ts ? new Date(ts) : new Date();
+        if (isNaN(d.getTime())) return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        return d.toLocaleString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      };
+      const formattedInspectionDate = formatOfficialDate((activeInspection as any).timestamp);
+
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -201,8 +215,9 @@ export default function ReportsScreen({ inspections, onRowClick, onSearchClick, 
               <td style="width: 25%;"><strong>Commodity:</strong></td>
               <td style="width: 35%;">${activeInspection.title}</td>
               <td style="width: 20%;"><strong>Inspection Date:</strong></td>
-              <td style="width: 20%;">${activeInspection.timeInfo || 'Today'}</td>
+              <td style="width: 20%;">${formattedInspectionDate}</td>
             </tr>
+
             <tr>
               <td><strong>Category / Location:</strong></td>
               <td>${activeInspection.meta}</td>

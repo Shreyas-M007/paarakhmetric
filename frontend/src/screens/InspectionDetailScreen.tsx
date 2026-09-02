@@ -7,11 +7,12 @@ interface InspectionDetailScreenProps {
   inspection: any;
   inspections?: any[];
   onSelectInspection?: (id: number) => void;
-  capturedImage: string | null;
+  capturedImage?: string | null;
   onBack: () => void;
   onManualOverride: (fieldName: string, newValue: string) => void;
   onUpdateProduct?: (id: number, name: string, category: string) => void;
   onDeleteInspection?: (id: number) => void;
+  onUpdateInspection?: (updated: any) => void;
   language?: Language;
   user?: any;
 }
@@ -26,8 +27,10 @@ const CATEGORIES = [
 ];
 
 export default function InspectionDetailScreen({
-  inspection, inspections = [], onSelectInspection, capturedImage, onBack, onManualOverride, onUpdateProduct, onDeleteInspection, language = 'en', user
+  inspection, inspections = [], onSelectInspection, capturedImage: _capturedImage, onBack, onManualOverride, onUpdateProduct, onDeleteInspection, onUpdateInspection, language = 'en', user
 }: InspectionDetailScreenProps) {
+
+
 
   const [inspectingSide, setInspectingSide] = useState('front');
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -45,7 +48,7 @@ export default function InspectionDetailScreen({
 
   const allImages: Array<{ url: string; panel?: string }> = (inspection.images && inspection.images.length > 0)
     ? inspection.images
-    : (inspection.image_url || capturedImage ? [{ url: inspection.image_url || capturedImage, panel: inspectingSide }] : []);
+    : (inspection.image_url ? [{ url: inspection.image_url, panel: inspectingSide }] : []);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
@@ -56,8 +59,9 @@ export default function InspectionDetailScreen({
     return `${base}${url.startsWith('/') ? url : '/' + url}`;
   };
 
-  const rawImg = (!imageError && allImages[activeImageIndex]?.url) || (!imageError && (inspection.image_url || capturedImage)) || null;
+  const rawImg = (!imageError && allImages[activeImageIndex]?.url) || (!imageError && inspection.image_url) || null;
   const displayImage = resolveImageUrl(rawImg);
+
 
 
 
@@ -438,6 +442,12 @@ export default function InspectionDetailScreen({
                       inspection.compliance_results = allPassed;
                       inspection.status = 'COMPLIANT';
                       setCurrentOverallStatus('COMPLIANT');
+                      onUpdateInspection?.({
+                        ...inspection,
+                        status: 'COMPLIANT',
+                        compliance_results: allPassed,
+                        notes: 'Issued Legal Metrology Compliance Clearance (All Rules Validated)'
+                      });
                       setSavedSuccessMsg('✓ Issued Legal Metrology Compliance Clearance (All Rules Validated)');
                       setTimeout(() => setSavedSuccessMsg(''), 3000);
                     }}
@@ -454,6 +464,12 @@ export default function InspectionDetailScreen({
                       inspection.compliance_results = marked;
                       inspection.status = 'NON_COMPLIANT';
                       setCurrentOverallStatus('NON_COMPLIANT');
+                      onUpdateInspection?.({
+                        ...inspection,
+                        status: 'NON_COMPLIANT',
+                        compliance_results: marked,
+                        notes: 'Issued Form-1 Notice of Violation under Section 39'
+                      });
                       setSavedSuccessMsg('⚠️ Issued Form-1 Notice of Violation under Section 39');
                       setTimeout(() => setSavedSuccessMsg(''), 3000);
                     }}
@@ -487,6 +503,12 @@ export default function InspectionDetailScreen({
                       inspection.compliance_results = allPassed;
                       inspection.status = 'COMPLIANT';
                       setCurrentOverallStatus('COMPLIANT');
+                      onUpdateInspection?.({
+                        ...inspection,
+                        status: 'COMPLIANT',
+                        compliance_results: allPassed,
+                        notes: 'Forwarded Inspection for Clearance Endorsement'
+                      });
                       setSavedSuccessMsg('✓ Forwarded Inspection for Clearance Endorsement');
                       setTimeout(() => setSavedSuccessMsg(''), 3000);
                     }}
@@ -503,6 +525,12 @@ export default function InspectionDetailScreen({
                       inspection.compliance_results = marked;
                       inspection.status = 'NON_COMPLIANT';
                       setCurrentOverallStatus('NON_COMPLIANT');
+                      onUpdateInspection?.({
+                        ...inspection,
+                        status: 'NON_COMPLIANT',
+                        compliance_results: marked,
+                        notes: 'Forwarded Case to Assistant Collector for Section 39 Notice'
+                      });
                       setSavedSuccessMsg('⚠️ Forwarded Case to Assistant Collector for Section 39 Notice');
                       setTimeout(() => setSavedSuccessMsg(''), 3000);
                     }}
@@ -533,6 +561,12 @@ export default function InspectionDetailScreen({
                       inspection.compliance_results = allPassed;
                       inspection.status = 'COMPLIANT';
                       setCurrentOverallStatus('COMPLIANT');
+                      onUpdateInspection?.({
+                        ...inspection,
+                        status: 'COMPLIANT',
+                        compliance_results: allPassed,
+                        notes: 'Physical Declarations Confirmed Compliant'
+                      });
                       setSavedSuccessMsg('✓ Physical Declarations Confirmed Compliant');
                       setTimeout(() => setSavedSuccessMsg(''), 3000);
                     }}
@@ -549,6 +583,12 @@ export default function InspectionDetailScreen({
                       inspection.compliance_results = marked;
                       inspection.status = 'REQUIRES_REVIEW';
                       setCurrentOverallStatus('REQUIRES_REVIEW');
+                      onUpdateInspection?.({
+                        ...inspection,
+                        status: 'REQUIRES_REVIEW',
+                        compliance_results: marked,
+                        notes: 'Flagged for Senior Inspector & Collector Review'
+                      });
                       setSavedSuccessMsg('📋 Flagged for Senior Inspector & Collector Review');
                       setTimeout(() => setSavedSuccessMsg(''), 3000);
                     }}
@@ -558,6 +598,7 @@ export default function InspectionDetailScreen({
                   </button>
                 </div>
               )}
+
             </div>
           </section>
 

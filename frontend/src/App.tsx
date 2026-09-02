@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Language } from './i18n';
 import { mapBackendInspection, MappedInspection } from './utils/mapInspection';
-import { saveInspectionToDb, getAllInspectionsFromDb } from './utils/storage';
+import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb } from './utils/storage';
+
 
 // Layout & Components
 import Layout from './components/Layout';
@@ -254,6 +255,7 @@ export default function App() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           const clean = parsed.filter((i: any) => {
+            if (String(i.id) === '3') return false;
             const title = (i.product?.name || i.title || '').toLowerCase();
             return !['premium basmati', 'choco bites', 'cold-pressed', 'snack-o', 'herbal glow', 'fresh cow milk'].some(m => title.includes(m));
           });
@@ -269,12 +271,15 @@ export default function App() {
 
   // Load complete inspections and photos from IndexedDB on mount
   useEffect(() => {
+    deleteInspectionFromDb('3');
     getAllInspectionsFromDb().then(stored => {
-      if (stored && stored.length > 0) {
+      const validStored = (stored || []).filter(s => String(s.id) !== '3');
+      if (validStored && validStored.length > 0) {
         setInspections(prev => {
           const map = new Map<string, any>();
-          stored.forEach(s => map.set(String(s.id), s));
+          validStored.forEach(s => map.set(String(s.id), s));
           prev.forEach(p => {
+            if (String(p.id) === '3') return;
             const existing = map.get(String(p.id));
             map.set(String(p.id), { ...existing, ...p, image_url: p.image_url || existing?.image_url });
           });
@@ -283,6 +288,7 @@ export default function App() {
       }
     });
   }, []);
+
 
 
 
@@ -603,71 +609,45 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Real-time zero-config cloud sync relay across mobile phones and laptops
+  // Real-time cross-tab synchronization
   useEffect(() => {
-    const pollCloudRelay = async () => {
-      try {
-        const res = await fetch('https://ntfy.sh/paarakhmetric_live_ledger_sync/json?poll=1');
-        if (!res.ok) return;
-        const text = await res.text();
-        const lines = text.trim().split('\n');
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            let payload = null;
-            if (data.attachment?.url) {
-              const fileRes = await fetch(data.attachment.url);
-              if (fileRes.ok) payload = await fileRes.json();
-            } else if (data.message) {
-              payload = JSON.parse(data.message);
-            }
-            if (payload && payload.id) {
-              setInspections(prev => {
-                const map = new Map();
-                prev.forEach(p => map.set(String(p.id), p));
-                const existing = map.get(String(payload.id));
-                const merged = {
-                  ...existing,
-                  ...payload,
-                  id: String(payload.id),
-                  title: payload.product?.name || payload.title || 'Packaged Commodity',
-                  meta: payload.meta || `${payload.product?.category || 'General'} · Field Scanner`,
-                  timeInfo: payload.timeInfo || 'Recently'
-                };
-                map.set(String(payload.id), merged);
-                saveInspectionToDb(merged);
-                return Array.from(map.values());
-              });
-            }
-          } catch {}
-        }
-      } catch {}
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    const channel = new BroadcastChannel('paarakhmetric_ledger_channel');
+    channel.onmessage = (event) => {
+      if (event.data?.type === 'INSPECTIONS_UPDATED') {
+        fetchInspections();
+      }
     };
-
-    pollCloudRelay();
-    const interval = setInterval(pollCloudRelay, 5000);
-    return () => clearInterval(interval);
+    return () => channel.close();
   }, []);
 
-
-  const _handleDeleteInspection = async (id: number) => {
-
+  const _handleDeleteInspection = async (id: number | string) => {
+    const strId = String(id);
     try {
+      await deleteInspectionFromDb(strId);
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      await apiCall(`/inspections/${id}`, { method: 'DELETE', headers });
-      setInspections(prev => prev.filter(i => i.id !== id));
-      if (selectedInspectionId === id) {
+      await apiCall(`/inspections/${strId}`, { method: 'DELETE', headers }).catch(() => {});
+      
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          new BroadcastChannel('paarakhmetric_ledger_channel').postMessage({ type: 'INSPECTIONS_UPDATED' });
+        }
+      } catch {}
+
+      setInspections(prev => prev.filter(i => String(i.id) !== strId));
+      if (String(selectedInspectionId) === strId) {
         setSelectedInspectionId(null);
         setCurrentPage('history');
       }
     } catch (err) {
       console.error("Failed to delete inspection:", err);
-      setInspections(prev => prev.filter(i => i.id !== id));
+      setInspections(prev => prev.filter(i => String(i.id) !== strId));
     }
   };
-  void _handleDeleteInspection;
+
+
+
 
   // ============================================================
   //  BATCH PROCESSING
@@ -1038,23 +1018,65 @@ export default function App() {
       setCapturedImage(null);
       setCurrentPage('inspection');
 
-      // Instant real-time cloud broadcast across devices
+      // Universal cloud persistence across devices with photo upload
+      (async () => {
+        try {
+          const syncRes = await apiCall('/inspections/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newRecord)
+          });
+          if (syncRes.ok) {
+            fetchInspections();
+            return;
+          }
+
+          // Fallback to direct products + inspections + photo upload
+          const pRes = await apiCall('/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: finalProductName,
+              category: chosenCat,
+              manufacturer: extractedManufacturer
+            })
+          });
+          if (pRes.ok) {
+            const pData = await pRes.json();
+            const iRes = await apiCall('/inspections', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                product_id: pData.id,
+                location: "Field Inspection Scanner",
+                notes: `Live scan: ${finalProductName}`
+              })
+            });
+            if (iRes.ok && imagesToAnalyze[0]) {
+              const iData = await iRes.json();
+              const imgFetch = await fetch(imagesToAnalyze[0]);
+              const blob = await imgFetch.blob();
+              const form = new FormData();
+              form.append('panel_side', activeSide || 'front');
+              form.append('file', blob, 'scan.jpg');
+              await apiCall(`/inspections/${iData.id}/upload-image`, {
+                method: 'POST',
+                body: form
+              });
+            }
+            fetchInspections();
+          }
+        } catch (e) {
+          console.warn("Cloud persistence notice:", e);
+        }
+      })();
+
       try {
-        fetch('https://ntfy.sh/paarakhmetric_live_ledger_sync', {
-          method: 'POST',
-          headers: { 'Title': 'NewInspection' },
-          body: JSON.stringify(newRecord)
-        }).catch(() => {});
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          new BroadcastChannel('paarakhmetric_ledger_channel').postMessage({ type: 'INSPECTIONS_UPDATED' });
+        }
       } catch {}
 
-      // Universal cloud persistence across devices
-      apiCall('/inspections/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newRecord)
-      })
-      .then(() => fetchInspections())
-      .catch(e => console.warn("Backend cloud sync error:", e));
 
     } catch (err: any) {
       console.warn("Activating intelligent offline inspection mode with captured photo:", err);
@@ -1100,15 +1122,7 @@ export default function App() {
       setCommodityName('');
       setCurrentPage('inspection');
 
-      // Instant real-time cloud broadcast for fallback
-      try {
-        fetch('https://ntfy.sh/paarakhmetric_live_ledger_sync', {
-          method: 'POST',
-          headers: { 'Title': 'NewInspection' },
-          body: JSON.stringify(fallbackRecord)
-        }).catch(() => {});
-      } catch {}
-
+      // Fallback cloud persistence across devices
       apiCall('/inspections/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1116,6 +1130,13 @@ export default function App() {
       })
       .then(() => fetchInspections())
       .catch(e => console.warn("Backend cloud sync error:", e));
+
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          new BroadcastChannel('paarakhmetric_ledger_channel').postMessage({ type: 'INSPECTIONS_UPDATED' });
+        }
+      } catch {}
+
 
 
 
@@ -1130,29 +1151,74 @@ export default function App() {
 
 
   // ============================================================
-  //  MANUAL OVERRIDE
+  //  INSPECTION & STATUS UPDATES
   // ============================================================
 
-  const handleManualOverride = (fieldName: string, newValue: string) => {
-    const updated = inspections.map(insp => {
-      if (insp.id === selectedInspectionId) {
-        const updatedDecls = (insp.declarations || []).map((decl: any) => {
-          if (decl.field_name === fieldName) return { ...decl, value: newValue, status: "OFFICER_CONFIRMED" };
-          return decl;
-        });
-        const updatedRules = (insp.compliance_results || []).map((rule: any) => {
-          if (rule.field === fieldName) return { ...rule, status: "PASS", details: `Officer verified and updated: ${newValue}` };
-          return rule;
-        });
-        const hasFail = updatedRules.some((r: any) => r.status === 'FAIL');
-        const hasReview = updatedRules.some((r: any) => r.status === 'REVIEW');
-        const newStatus = hasFail ? 'NON_COMPLIANT' : (hasReview ? 'REQUIRES_REVIEW' : 'COMPLIANT');
-        return { ...insp, declarations: updatedDecls, compliance_results: updatedRules, status: newStatus };
+  const handleUpdateInspection = async (updatedItem: any) => {
+    const strId = String(updatedItem.id);
+    
+    // 1. Update React state immediately
+    setInspections(prev => prev.map(i => String(i.id) === strId ? { ...i, ...updatedItem } : i));
+    if (activeInspectionDirect && String(activeInspectionDirect.id) === strId) {
+      setActiveInspectionDirect({ ...activeInspectionDirect, ...updatedItem });
+    }
+
+    // 2. Persist to permanent client storage (IndexedDB)
+    await saveInspectionToDb(updatedItem);
+
+    // 3. Persist to backend server (PUT /api/inspections/{id})
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await apiCall(`/inspections/${strId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          status: updatedItem.status,
+          notes: updatedItem.notes,
+          compliance_results: updatedItem.compliance_results,
+          declarations: updatedItem.declarations
+        })
+      });
+    } catch (e) {
+      console.warn("Backend status update notice:", e);
+    }
+
+    // 4. Notify all other open windows/tabs
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        new BroadcastChannel('paarakhmetric_ledger_channel').postMessage({ type: 'INSPECTIONS_UPDATED' });
       }
-      return insp;
-    });
-    setInspections(updated);
+    } catch {}
   };
+
+  const handleManualOverride = async (fieldName: string, newValue: string) => {
+    const currentId = String(selectedInspectionId || activeInspectionDirect?.id);
+    const target = inspections.find(i => String(i.id) === currentId) || activeInspectionDirect;
+    if (!target) return;
+
+    const updatedDecls = (target.declarations || []).map((decl: any) => {
+      if (decl.field_name === fieldName) return { ...decl, value: newValue, status: "OFFICER_CONFIRMED" };
+      return decl;
+    });
+    const updatedRules = (target.compliance_results || []).map((rule: any) => {
+      if (rule.field === fieldName) return { ...rule, status: "PASS", details: `Officer verified and updated: ${newValue}` };
+      return rule;
+    });
+    const hasFail = updatedRules.some((r: any) => r.status === 'FAIL');
+    const hasReview = updatedRules.some((r: any) => r.status === 'REVIEW' || r.status === 'REQUIRES_REVIEW');
+    const newStatus = hasFail ? 'NON_COMPLIANT' : (hasReview ? 'REQUIRES_REVIEW' : 'COMPLIANT');
+
+    const updated = {
+      ...target,
+      declarations: updatedDecls,
+      compliance_results: updatedRules,
+      status: newStatus
+    };
+
+    await handleUpdateInspection(updated);
+  };
+
 
   // ============================================================
   //  NAVIGATION HELPERS
@@ -1262,8 +1328,10 @@ export default function App() {
             onManualOverride={handleManualOverride}
             onUpdateProduct={handleUpdateProduct}
             onDeleteInspection={_handleDeleteInspection}
+            onUpdateInspection={handleUpdateInspection}
             language={language}
             user={user}
+
           />
         ) : (
           <div className="flex flex-col items-center justify-center p-8 text-center min-h-[50vh]">
