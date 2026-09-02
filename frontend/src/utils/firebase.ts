@@ -153,28 +153,21 @@ export async function saveInspectionToFirebase(inspection: any): Promise<boolean
   try {
     const strId = String(inspection.id);
     const docRef = doc(db, 'inspections', strId);
-
-    // If there is an unsynced base64 image, upload it to Google CDN Storage first
-    let finalImageUrl = inspection.image_url;
-    if (finalImageUrl && finalImageUrl.startsWith('data:')) {
-      const cdnUrl = await uploadInspectionPhotoToFirebase(strId, finalImageUrl, 'front');
-      if (cdnUrl) finalImageUrl = cdnUrl;
-    }
-
     const payload = {
       ...inspection,
       id: strId,
-      image_url: finalImageUrl,
       updated_at: new Date().toISOString()
     };
 
     await setDoc(docRef, payload, { merge: true });
     return true;
+
   } catch (err) {
     console.error('Firestore save error:', err);
     return false;
   }
 }
+
 
 /**
  * Deletes an inspection document from Firestore across all devices.

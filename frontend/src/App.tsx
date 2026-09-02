@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Language } from './i18n';
 import { mapBackendInspection, MappedInspection } from './utils/mapInspection';
-import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb, clearAllInspectionsFromDb } from './utils/storage';
+import { saveInspectionToDb, getAllInspectionsFromDb, deleteInspectionFromDb } from './utils/storage';
 import { 
   initFirebase, 
   isFirebaseConfigured, 
   subscribeToInspections, 
   saveInspectionToFirebase, 
   deleteInspectionFromFirebase,
-  getAllInspectionsFromFirebase,
-  clearAllInspectionsFromFirebase 
+  getAllInspectionsFromFirebase 
 } from './utils/firebase';
+
 
 
 
@@ -308,17 +308,6 @@ function isLegacyMockRecord(i: any): boolean {
   const [selectedInspectionId, setSelectedInspectionId] = useState<number | null>(null);
   const [activeInspectionDirect, setActiveInspectionDirect] = useState<any>(null);
 
-  // One-time automatic cleanup of old pre-Firebase legacy records
-  useEffect(() => {
-    const hasPurged = localStorage.getItem('paarakhmetric_purged_v3');
-    if (!hasPurged) {
-      clearAllInspectionsFromDb();
-      clearAllInspectionsFromFirebase();
-      localStorage.removeItem('paarakhmetric_inspections');
-      localStorage.setItem('paarakhmetric_purged_v3', 'true');
-      setInspections([]);
-    }
-  }, []);
 
 
   // Load complete inspections and photos from IndexedDB on mount
@@ -629,14 +618,43 @@ function isLegacyMockRecord(i: any): boolean {
     try {
       if (isFirebaseConfigured()) {
         const fbInspections = await getAllInspectionsFromFirebase();
-        const clean = (fbInspections || []).filter(i => !isLegacyMockRecord(i));
-        setInspections(clean);
+        let list = (fbInspections || []).filter(i => !isLegacyMockRecord(i));
+        
+        // If Firestore returned 0 items, check IndexedDB so newly added scans are never blanked out
+        if (list.length === 0) {
+          const localStored = await getAllInspectionsFromDb();
+          list = (localStored || []).filter((s: any) => !isLegacyMockRecord(s));
+        }
+
+        // Apply search query filter
+        if (query && query.trim()) {
+          const q = query.trim().toLowerCase();
+          list = list.filter(i => 
+            (i.product?.name && i.product.name.toLowerCase().includes(q)) ||
+            (i.product?.manufacturer && i.product.manufacturer.toLowerCase().includes(q)) ||
+            (i.notes && i.notes.toLowerCase().includes(q)) ||
+            String(i.id).includes(q)
+          );
+        }
+
+        // Apply status filter
+        if (status && status !== 'ALL') {
+          list = list.filter(i => i.status === status);
+        }
+
+        // Apply category filter
+        if (category && category !== 'ALL') {
+          list = list.filter(i => i.product?.category === category);
+        }
+
+        setInspections(list);
         try {
-          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(clean));
+          localStorage.setItem('paarakhmetric_inspections', JSON.stringify(list));
         } catch {}
-        clean.forEach(c => saveInspectionToDb(c));
+        list.forEach(c => saveInspectionToDb(c));
         return;
       }
+
 
 
       const params = new URLSearchParams();
@@ -1141,10 +1159,13 @@ function isLegacyMockRecord(i: any): boolean {
         images: scannedImages.length > 0 ? scannedImages : [{ id: '1', url: capturedImage!, panel: activeSide }]
       };
       
-      saveInspectionToDb(newRecord);
-      saveInspectionToFirebase(newRecord);
+      await saveInspectionToDb(newRecord);
+      await saveInspectionToFirebase(newRecord);
       setActiveInspectionDirect(newRecord);
-      setInspections(prev => [newRecord, ...prev]);
+      setInspections(prev => {
+        const filtered = prev.filter(p => String(p.id) !== String(newRecord.id));
+        return [newRecord, ...filtered];
+      });
 
       setSelectedInspectionId(newId);
       setCommodityName('');
@@ -1152,58 +1173,6 @@ function isLegacyMockRecord(i: any): boolean {
       setCapturedImage(null);
       setCurrentPage('inspection');
 
-      // Universal cloud persistence across devices with photo upload
-      (async () => {
-        try {
-          const syncRes = await apiCall('/inspections/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newRecord)
-          });
-          if (syncRes.ok) {
-            fetchInspections();
-            return;
-          }
-
-          // Fallback to direct products + inspections + photo upload
-          const pRes = await apiCall('/products', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: finalProductName,
-              category: chosenCat,
-              manufacturer: extractedManufacturer
-            })
-          });
-          if (pRes.ok) {
-            const pData = await pRes.json();
-            const iRes = await apiCall('/inspections', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                product_id: pData.id,
-                location: "Field Inspection Scanner",
-                notes: `Live scan: ${finalProductName}`
-              })
-            });
-            if (iRes.ok && imagesToAnalyze[0]) {
-              const iData = await iRes.json();
-              const imgFetch = await fetch(imagesToAnalyze[0]);
-              const blob = await imgFetch.blob();
-              const form = new FormData();
-              form.append('panel_side', activeSide || 'front');
-              form.append('file', blob, 'scan.jpg');
-              await apiCall(`/inspections/${iData.id}/upload-image`, {
-                method: 'POST',
-                body: form
-              });
-            }
-            fetchInspections();
-          }
-        } catch (e) {
-          console.warn("Cloud persistence notice:", e);
-        }
-      })();
 
       try {
         if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -1249,23 +1218,18 @@ function isLegacyMockRecord(i: any): boolean {
         images: [{ id: '1', url: capturedImage!, panel: 'front' }]
       };
 
-      saveInspectionToDb(fallbackRecord);
-      saveInspectionToFirebase(fallbackRecord);
+      await saveInspectionToDb(fallbackRecord);
+      await saveInspectionToFirebase(fallbackRecord);
       setActiveInspectionDirect(fallbackRecord);
-      setInspections(prev => [fallbackRecord, ...prev]);
+      setInspections(prev => {
+        const filtered = prev.filter(p => String(p.id) !== String(fallbackRecord.id));
+        return [fallbackRecord, ...filtered];
+      });
 
       setSelectedInspectionId(offlineId);
       setCommodityName('');
       setCurrentPage('inspection');
 
-      // Fallback cloud persistence across devices
-      apiCall('/inspections/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fallbackRecord)
-      })
-      .then(() => fetchInspections())
-      .catch(e => console.warn("Backend cloud sync error:", e));
 
       try {
         if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
