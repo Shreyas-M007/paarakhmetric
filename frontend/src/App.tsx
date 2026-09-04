@@ -1344,18 +1344,43 @@ function isLegacyMockRecord(i: any): boolean {
   const handleUpdateInspection = async (updatedItem: any) => {
     const strId = String(updatedItem.id);
     
-    // 1. Update React state immediately
-    setInspections(prev => prev.map(i => String(i.id) === strId ? { ...i, ...updatedItem } : i));
+    // 1. Update React state immediately and sync to localStorage
+    setInspections(prev => {
+      const nextList = prev.map(i => String(i.id) === strId ? { ...i, ...updatedItem } : i);
+      try {
+        const safeForLocal = nextList.map(item => {
+          if (item.image_url && item.image_url.length > 20000) {
+            const { image_url, images, ...rest } = item;
+            return rest;
+          }
+          return item;
+        });
+        localStorage.setItem('paarakhmetric_cloud_ledger_v1', JSON.stringify(safeForLocal));
+      } catch (e) {
+        console.warn('localStorage ledger save notice:', e);
+      }
+      return nextList;
+    });
+
     if (activeInspectionDirect && String(activeInspectionDirect.id) === strId) {
       setActiveInspectionDirect({ ...activeInspectionDirect, ...updatedItem });
     }
 
     // 2. Persist to permanent client storage (IndexedDB)
-    await saveInspectionToDb(updatedItem);
-    saveInspectionToFirebase(updatedItem);
+    try {
+      await saveInspectionToDb(updatedItem);
+    } catch (e) {
+      console.warn("IndexedDB update error:", e);
+    }
 
+    // 3. Persist to Cloud Firestore (awaited)
+    try {
+      await saveInspectionToFirebase(updatedItem);
+    } catch (e) {
+      console.warn("Firebase update error:", e);
+    }
 
-    // 3. Persist to backend server (PUT /api/inspections/{id})
+    // 4. Persist to backend server (PUT /api/inspections/{id})
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -1366,14 +1391,17 @@ function isLegacyMockRecord(i: any): boolean {
           status: updatedItem.status,
           notes: updatedItem.notes,
           compliance_results: updatedItem.compliance_results,
-          declarations: updatedItem.declarations
+          declarations: updatedItem.declarations,
+          product: updatedItem.product,
+          product_name: updatedItem.product?.name || updatedItem.title,
+          category: updatedItem.product?.category || updatedItem.category
         })
       });
     } catch (e) {
       console.warn("Backend status update notice:", e);
     }
 
-    // 4. Notify all other open windows/tabs
+    // 5. Notify all other open windows/tabs
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         new BroadcastChannel('paarakhmetric_ledger_channel').postMessage({ type: 'INSPECTIONS_UPDATED' });
@@ -1445,20 +1473,112 @@ function isLegacyMockRecord(i: any): boolean {
     );
   }
 
-  const handleUpdateProduct = (id: number, name: string, category: string) => {
-    setInspections(prev => prev.map(insp => {
-      if (insp.id === id) {
-        return {
-          ...insp,
-          product: {
-            ...(insp.product || {}),
-            name,
-            category
+  const handleUpdateProduct = async (id: number | string, name: string, category: string) => {
+    const strId = String(id);
+    const cleanName = name.trim() || 'Packaged Commodity';
+    const cleanCat = category || 'General FMCG';
+    let targetUpdated: any = null;
+
+    // 1. Update inspections list state and immediately sync to localStorage
+    setInspections(prev => {
+      const updatedList = prev.map(insp => {
+        if (String(insp.id) === strId) {
+          targetUpdated = {
+            ...insp,
+            id: strId,
+            title: cleanName,
+            name: cleanName,
+            product_name: cleanName,
+            category: cleanCat,
+            meta: `${cleanCat} · ${insp.location || 'Field Scan'}`,
+            product: {
+              ...(insp.product || {}),
+              name: cleanName,
+              category: cleanCat
+            }
+          };
+          return targetUpdated;
+        }
+        return insp;
+      });
+
+      // Synchronously save updated list to localStorage right now
+      try {
+        const safeForLocal = updatedList.map(i => {
+          if (i.image_url && i.image_url.length > 20000) {
+            const { image_url, images, ...rest } = i;
+            return rest;
           }
-        };
+          return i;
+        });
+        localStorage.setItem('paarakhmetric_cloud_ledger_v1', JSON.stringify(safeForLocal));
+      } catch (e) {
+        console.warn('localStorage update warning:', e);
       }
-      return insp;
-    }));
+
+      return updatedList;
+    });
+
+    // 2. Update activeInspectionDirect if active
+    if (activeInspectionDirect && String(activeInspectionDirect.id) === strId) {
+      const updatedDirect = {
+        ...activeInspectionDirect,
+        id: strId,
+        title: cleanName,
+        name: cleanName,
+        product_name: cleanName,
+        category: cleanCat,
+        meta: `${cleanCat} · ${activeInspectionDirect.location || 'Field Scan'}`,
+        product: {
+          ...(activeInspectionDirect.product || {}),
+          name: cleanName,
+          category: cleanCat
+        }
+      };
+      setActiveInspectionDirect(updatedDirect);
+      if (!targetUpdated) targetUpdated = updatedDirect;
+    }
+
+    if (targetUpdated) {
+      // 3. Persist to permanent client storage (IndexedDB)
+      try {
+        await saveInspectionToDb(targetUpdated);
+      } catch (e) {
+        console.warn("Storage save error for updated product:", e);
+      }
+
+      // 4. Persist to Cloud Firestore (awaited)
+      try {
+        await saveInspectionToFirebase(targetUpdated);
+      } catch (e) {
+        console.warn("Firebase save error for updated product:", e);
+      }
+
+      // 5. Persist to Backend server API
+      try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        await apiCall(`/inspections/${strId}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            product: { name: cleanName, category: cleanCat },
+            product_name: cleanName,
+            name: cleanName,
+            category: cleanCat
+          })
+        });
+      } catch (e) {
+        console.warn("Backend product update notice:", e);
+      }
+
+      // 6. Broadcast to other tabs/windows
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          new BroadcastChannel('paarakhmetric_ledger_channel').postMessage({ type: 'INSPECTIONS_UPDATED' });
+        }
+      } catch {}
+    }
   };
 
   // Screens that break out of the tab layout

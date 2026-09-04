@@ -110,6 +110,26 @@ export function subscribeToInspections(onUpdate: (inspections: any[]) => void): 
 
 
 /**
+ * Deeply sanitizes an object for Firestore by removing undefined properties
+ * and converting invalid values so setDoc never throws an error.
+ */
+function sanitizeForFirestore(obj: any): any {
+  if (obj === undefined) return null;
+  if (obj === null) return null;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeForFirestore(item)).filter(item => item !== undefined);
+  }
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = sanitizeForFirestore(value);
+    }
+  }
+  return result;
+}
+
+/**
  * Saves or updates an inspection document in Firestore.
  */
 export async function saveInspectionToFirebase(inspection: any): Promise<boolean> {
@@ -118,11 +138,11 @@ export async function saveInspectionToFirebase(inspection: any): Promise<boolean
   try {
     const strId = String(inspection.id);
     const docRef = doc(db, 'inspections', strId);
-    const payload = {
+    const payload = sanitizeForFirestore({
       ...inspection,
       id: strId,
       updated_at: new Date().toISOString()
-    };
+    });
 
     await setDoc(docRef, payload, { merge: true });
     return true;

@@ -545,6 +545,33 @@ def update_inspection(inspection_id: int, payload: dict, db: Session = Depends(g
         insp.notes = payload["notes"]
     if "location" in payload:
         insp.location = payload["location"]
+
+    # Support updating Product Name and Category
+    product_name = None
+    product_category = None
+    if "product" in payload and isinstance(payload["product"], dict):
+        product_name = payload["product"].get("name")
+        product_category = payload["product"].get("category")
+    if "product_name" in payload and payload["product_name"]:
+        product_name = payload["product_name"]
+    if "name" in payload and payload["name"]:
+        product_name = payload["name"]
+    if "category" in payload and payload["category"]:
+        product_category = payload["category"]
+
+    if product_name or product_category:
+        if insp.product:
+            if product_name:
+                insp.product.name = product_name
+            if product_category:
+                insp.product.category = product_category
+        else:
+            new_prod = Product(name=product_name or "Packaged Commodity", category=product_category or "General FMCG")
+            db.add(new_prod)
+            db.flush()
+            insp.product_id = new_prod.id
+            insp.product = new_prod
+
     if "compliance_results" in payload:
         for r_in in payload["compliance_results"]:
             existing = db.query(ComplianceResult).filter(

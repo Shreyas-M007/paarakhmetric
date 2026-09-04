@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Scan, AlertCircle, CheckCircle, AlertTriangle, Edit3, Save, ShieldCheck, X, Check, Upload, ZoomIn, Maximize2, Download } from 'lucide-react';
 import { computeRuleTally } from '../utils/mapInspection';
 import { Language, translations, getStatusTranslation, getDeclarationFieldTranslation, getCategoryTranslation } from '../i18n';
@@ -14,9 +14,9 @@ interface InspectionDetailScreenProps {
 
   onBack: () => void;
   onManualOverride: (fieldName: string, newValue: string) => void;
-  onUpdateProduct?: (id: number, name: string, category: string) => void;
-  onDeleteInspection?: (id: number) => void;
-  onUpdateInspection?: (updated: any) => void;
+  onUpdateProduct?: (id: any, name: string, category: string) => void | Promise<void>;
+  onDeleteInspection?: (id: any) => void;
+  onUpdateInspection?: (updated: any) => void | Promise<void>;
   language?: Language;
   user?: any;
 }
@@ -43,7 +43,12 @@ export default function InspectionDetailScreen({
   // Product Name & Category edit state
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [prodName, setProdName] = useState(inspection.product?.name || 'Packaged Commodity');
-  const [prodCategory, setProdCategory] = useState(inspection.product?.category || 'General');
+  const [prodCategory, setProdCategory] = useState(inspection.product?.category || 'General FMCG');
+
+  useEffect(() => {
+    setProdName(inspection.product?.name || 'Packaged Commodity');
+    setProdCategory(inspection.product?.category || 'General FMCG');
+  }, [inspection.id, inspection.product?.name, inspection.product?.category]);
 
   const [imageError, setImageError] = useState(false);
   const [showZoomModal, setShowZoomModal] = useState(false);
@@ -124,11 +129,44 @@ export default function InspectionDetailScreen({
     setEditValue('');
   };
 
-  const handleSaveProductInfo = () => {
+  const handleSaveProductInfo = async () => {
+    const cleanName = prodName.trim() || 'Packaged Commodity';
+    const cleanCategory = prodCategory || 'General FMCG';
+
+    // 1. Immediately mutate local object in-place across all aliases
+    const updatedProduct = {
+      ...(inspection.product || {}),
+      name: cleanName,
+      category: cleanCategory
+    };
+    inspection.product = updatedProduct;
+    inspection.title = cleanName;
+    inspection.name = cleanName;
+    inspection.product_name = cleanName;
+    inspection.category = cleanCategory;
+    inspection.meta = `${cleanCategory} · ${inspection.location || 'Field Scan'}`;
+
+    // 2. Call onUpdateProduct callback (persists to IndexedDB, localStorage, Firebase, and Backend)
     if (onUpdateProduct) {
-      onUpdateProduct(inspection.id, prodName, prodCategory);
+      await onUpdateProduct(inspection.id, cleanName, cleanCategory);
     }
+
+    // 3. Also call onUpdateInspection if present
+    if (onUpdateInspection) {
+      await onUpdateInspection({
+        ...inspection,
+        product: updatedProduct,
+        title: cleanName,
+        name: cleanName,
+        product_name: cleanName,
+        category: cleanCategory,
+        meta: inspection.meta
+      });
+    }
+
     setIsEditingProduct(false);
+    setSavedSuccessMsg(`Product saved: ${cleanName} (${getCategoryTranslation(cleanCategory, language)})`);
+    setTimeout(() => setSavedSuccessMsg(''), 2500);
   };
 
 
@@ -211,23 +249,38 @@ export default function InspectionDetailScreen({
                   type="text"
                   value={prodName}
                   onChange={e => setProdName(e.target.value)}
-                  className="bg-surface-elevated border border-accent rounded-lg px-2 py-1 text-xs text-fg font-medium outline-none"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleSaveProductInfo();
+                    if (e.key === 'Escape') setIsEditingProduct(false);
+                  }}
+                  autoFocus
+                  className="bg-surface-elevated border border-accent rounded-lg px-2.5 py-1 text-xs text-fg font-medium outline-none focus:ring-1 focus:ring-accent"
                   placeholder="Commodity name"
                 />
                 <select
                   value={prodCategory}
                   onChange={e => setProdCategory(e.target.value)}
-                  className="bg-surface-elevated border border-divider rounded-lg px-2 py-1 text-xs text-fg font-medium outline-none cursor-pointer"
+                  className="bg-surface-elevated border border-divider rounded-lg px-2 py-1 text-xs text-fg font-medium outline-none cursor-pointer focus:border-accent"
                 >
                   {CATEGORIES.map(c => (
                     <option key={c} value={c}>{getCategoryTranslation(c, language)}</option>
                   ))}
                 </select>
-                <button onClick={handleSaveProductInfo} className="p-1 bg-accent text-on-accent rounded-lg text-xs font-bold flex items-center gap-1 px-2 cursor-pointer">
-                  <Check className="w-3 h-3" /> Save
+                <button 
+                  type="button"
+                  onClick={handleSaveProductInfo} 
+                  className="p-1 bg-accent text-on-accent rounded-lg text-xs font-bold flex items-center gap-1 px-2.5 cursor-pointer shadow-sm hover:brightness-110 active:scale-95 transition-all"
+                  title="Save product name & category"
+                >
+                  <Check className="w-3.5 h-3.5" /> Save
                 </button>
-                <button onClick={() => setIsEditingProduct(false)} className="p-1 bg-surface-elevated text-fg-muted rounded-lg text-xs font-bold px-2 cursor-pointer">
-                  <X className="w-3 h-3" />
+                <button 
+                  type="button"
+                  onClick={() => setIsEditingProduct(false)} 
+                  className="p-1 bg-surface-elevated text-fg-muted rounded-lg text-xs font-bold px-2 cursor-pointer hover:bg-divider transition-colors"
+                  title="Cancel"
+                >
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
