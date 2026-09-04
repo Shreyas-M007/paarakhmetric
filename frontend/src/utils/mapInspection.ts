@@ -48,14 +48,40 @@ const categoryIconMap: Record<string, string> = {
   'Sweets': 'Candy',
 };
 
-function formatTimeAgo(timestamp: string, lang: Language = 'en'): string {
+function extractTimestamp(raw: any): Date | null {
+  if (!raw) return null;
+  
+  // 1. Check direct timestamp fields
+  const candidates = [raw.timestamp, raw.created_at, raw.updated_at, raw.date];
+  for (const c of candidates) {
+    if (c) {
+      const d = new Date(c);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // 2. Extract from filename or title if present (e.g., IMG_20260829_204624)
+  const textToScan = `${raw.notes || ''} ${raw.image_url || ''} ${raw.product?.name || ''} ${raw.title || ''}`;
+  const match = textToScan.match(/(?:IMG[_\s])?(\d{4})(\d{2})(\d{2})[_\s](\d{2})(\d{2})(\d{2})/);
+  if (match) {
+    const [_, year, month, day, hour, min, sec] = match;
+    const d = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(min), Number(sec));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
+}
+
+function formatTimeAgo(timestamp: Date | string | number | null | undefined, lang: Language = 'en'): string {
   if (!timestamp) return '';
+  const then = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  if (isNaN(then.getTime())) return '';
+  
   const now = new Date();
-  const then = new Date(timestamp);
   const diffMs = now.getTime() - then.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   
-  if (diffMins < 1) {
+  if (diffMins < 2) {
     if (lang === 'hi') return 'अभी';
     if (lang === 'kn') return 'ಈಗಷ್ಟೇ';
     if (lang === 'ta') return 'இப்போது';
@@ -126,13 +152,23 @@ export function mapBackendInspection(raw: any, lang: Language = 'en'): MappedIns
   const translatedCat = getCategoryTranslation(category, lang);
   const meta = [translatedCat, location].filter(Boolean).join(' · ');
 
+  const extractedDate = extractTimestamp(raw);
+  let computedTimeInfo = extractedDate ? formatTimeAgo(extractedDate, lang) : '';
+  if (!computedTimeInfo) {
+    if (raw.timeInfo && !raw.timeInfo.toLowerCase().includes('just now')) {
+      computedTimeInfo = raw.timeInfo;
+    } else {
+      computedTimeInfo = 'Recently';
+    }
+  }
+
   return {
     ...raw,
     id: String(raw.id),
     title: productName,
     meta: raw.meta || meta,
     status: normalizeStatus(raw.status),
-    timeInfo: raw.timeInfo || formatTimeAgo(raw.timestamp, lang),
+    timeInfo: computedTimeInfo,
     iconType: categoryIconMap[category] || undefined,
     image_url: raw.image_url || raw.images?.[0]?.url || undefined,
     images: raw.images,
