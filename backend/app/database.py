@@ -73,6 +73,7 @@ class Inspection(Base):
     notes = Column(Text, nullable=True)
 
     product = relationship("Product", back_populates="inspections")
+    officer = relationship("User")
     images = relationship("ProductImage", back_populates="inspection")
     compliance_results = relationship("ComplianceResult", back_populates="inspection")
     declarations = relationship("Declaration", back_populates="inspection")

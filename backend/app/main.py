@@ -77,7 +77,7 @@ def format_inspection_summary(insp: Inspection, match_score: float = 100.0) -> d
         "timestamp": insp.timestamp.isoformat() if insp.timestamp else "",
         "status": insp.status,
         "location": insp.location or "Field Store",
-        "officer": insp.officer.full_name if (insp.officer and insp.officer.full_name) else "Legal Metrology Officer",
+        "officer": (insp.officer.full_name if getattr(insp, 'officer', None) and insp.officer.full_name else getattr(insp, 'officer_name', None) or "Legal Metrology Officer"),
         "declarations": decls,
         "compliance_results": rules,
         "notes": insp.notes or "",
