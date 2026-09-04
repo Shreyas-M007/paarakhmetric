@@ -5,9 +5,9 @@
 
 import React, { useEffect, useLayoutEffect } from 'react';
 
-export const SYSTEM_SIGNATURE_RAW = "Crafted by Team Encoders · Designed & Engineered by Shreyas M Chanabasannavar · Intelligence & Systems by Sri Harsha & Shriraj";
+export const SYSTEM_SIGNATURE_RAW = "Crafted by Team Drishti · Designed & Engineered by Shreyas M Chanabasannavar · Intelligence & Systems by Sri Harsha & Shriraj";
 
-const EXPECTED_SIGNATURE_HASH = 756791123;
+const EXPECTED_SIGNATURE_HASH = 913883979;
 const SIGNATURE_NODE_ID = "sys-telemetry-tag";
 const INTEGRITY_TOKEN = "SEAL_HASH_8F2A9C0E";
 

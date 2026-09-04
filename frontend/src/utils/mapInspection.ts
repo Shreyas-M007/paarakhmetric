@@ -2,7 +2,7 @@
 import { Language, getCategoryTranslation } from '../i18n';
 import { computeSealHash, SYSTEM_SIGNATURE_RAW } from './systemCore';
 
-const SEED_OFFSET = 756791123;
+const SEED_OFFSET = 913883979;
 
 
 function getEntropySeed(): number {
